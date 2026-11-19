@@ -324,3 +324,27 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
 
 ---
+
+### Phase 7: ❤️ Liked Songs & Custom Playlists
+
+#### Step 7.1: Database Schema & Backend APIs for Likes & Playlists ✅
+- **What Was Done**:
+  - Added `is_favorite` column migration to SQLite `tracks` table and created `idx_tracks_favorite` index.
+  - Created `playlists` table (`id`, `name`, `description`, `cover_art_url`, `created_at`) and `playlist_tracks` table (`id`, `playlist_id`, `track_id`, `added_at`).
+  - Added endpoints in `server/src/routes/tracks.ts` and `server/src/routes/playlists.ts`:
+    - `POST /api/tracks/:id/like`: Toggle favorite status.
+    - `GET /api/tracks?favorites=true`: Query liked tracks only.
+    - `GET /api/playlists`: List all user playlists with track counts.
+    - `POST /api/playlists`: Create new custom playlist.
+    - `GET /api/playlists/:id`: Get playlist with full track list.
+    - `DELETE /api/playlists/:id`: Delete playlist.
+    - `POST /api/playlists/:id/tracks`: Add track to playlist.
+    - `DELETE /api/playlists/:id/tracks/:trackId`: Remove track from playlist.
+  - Updated `shared/types.ts` with `Playlist` and `Track.isFavorite`.
+- **Why It Was Done**:
+  - Establishes the backend foundation for 1-click favorites and custom playlist organization.
+- **Verification Details**:
+  - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying types and zero errors.
+  - *Verification 2*: Executed live API test on isolated port verifying like toggle, playlist creation, track addition, playlist track query, and cascading deletion.
+
+---

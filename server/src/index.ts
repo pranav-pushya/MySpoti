@@ -8,6 +8,7 @@ import categoriesRouter from './routes/categories.js';
 import tracksRouter from './routes/tracks.js';
 import streamRouter from './routes/stream.js';
 import aiRouter from './routes/ai.js';
+import playlistsRouter from './routes/playlists.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,7 @@ app.use('/uploads', express.static(uploadsDir));
 // Routes
 app.use('/api/categories', categoriesRouter);
 app.use('/api/tracks', tracksRouter);
+app.use('/api/playlists', playlistsRouter);
 app.use('/api/stream', streamRouter);
 app.use('/api/ai', aiRouter);
 

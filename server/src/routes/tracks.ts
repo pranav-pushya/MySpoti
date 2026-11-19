@@ -7,6 +7,7 @@ import {
   getAllTracks, 
   getTrackById, 
   deleteTrack, 
+  toggleTrackLike,
   createCategory,
   getCategoryByName,
   getCategoryById
@@ -14,14 +15,17 @@ import {
 
 const router = Router();
 
-// GET /api/tracks - Get tracks with filtering (category, search, format)
+// GET /api/tracks - Get tracks with filtering (category, search, format, favorites)
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { category, search, format } = req.query;
+    const { category, search, format, favorites } = req.query;
+    const isFavoritesOnly = favorites === 'true' || favorites === '1';
+
     const tracks = getAllTracks(
       category as string | undefined,
       search as string | undefined,
-      format as string | undefined
+      format as string | undefined,
+      isFavoritesOnly
     );
 
     res.json({
@@ -41,6 +45,7 @@ router.get('/', (req: Request, res: Response) => {
         categoryColor: t.category_color,
         moodTags: JSON.parse(t.mood_tags || '[]'),
         coverArtUrl: t.cover_art_url,
+        isFavorite: t.is_favorite === 1,
         createdAt: t.created_at
       }))
     });
@@ -74,12 +79,32 @@ router.get('/:id', (req: Request, res: Response) => {
         categoryColor: track.category_color,
         moodTags: JSON.parse(track.mood_tags || '[]'),
         coverArtUrl: track.cover_art_url,
+        isFavorite: track.is_favorite === 1,
         createdAt: track.created_at
       }
     });
   } catch (error: any) {
     console.error('Error fetching track:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch track' });
+  }
+});
+
+// POST /api/tracks/:id/like - Toggle favorite status
+router.post('/:id/like', (req: Request, res: Response) => {
+  try {
+    const result = toggleTrackLike(req.params.id);
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Track not found' });
+    }
+
+    res.json({
+      success: true,
+      isFavorite: result.isFavorite,
+      message: result.isFavorite ? 'Track added to Liked Songs' : 'Track removed from Liked Songs'
+    });
+  } catch (error: any) {
+    console.error('Error toggling track favorite:', error);
+    res.status(500).json({ success: false, message: 'Failed to toggle like' });
   }
 });
 
@@ -102,7 +127,7 @@ router.post('/upload', uploadMedia.single('media'), async (req: Request, res: Re
     // 1. Extract metadata (duration, embedded art, title/artist)
     const metadata = await extractMediaMetadata(file.path, file.originalname, file.mimetype);
 
-    // 2. Resolve Category (use existing, create new, or null)
+    // 2. Resolve Category
     let finalCategoryId: string | undefined = requestedCategoryId;
 
     if (newCategoryName && typeof newCategoryName === 'string' && newCategoryName.trim()) {
@@ -148,7 +173,8 @@ router.post('/upload', uploadMedia.single('media'), async (req: Request, res: Re
       duration: metadata.duration,
       categoryId: finalCategoryId,
       moodTags,
-      coverArtUrl: metadata.coverArtUrl
+      coverArtUrl: metadata.coverArtUrl,
+      isFavorite: false
     });
 
     res.status(201).json({
@@ -168,6 +194,7 @@ router.post('/upload', uploadMedia.single('media'), async (req: Request, res: Re
         categoryColor: newTrack.category_color,
         moodTags: JSON.parse(newTrack.mood_tags || '[]'),
         coverArtUrl: newTrack.cover_art_url,
+        isFavorite: newTrack.is_favorite === 1,
         createdAt: newTrack.created_at
       }
     });

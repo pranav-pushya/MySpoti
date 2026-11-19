@@ -6,6 +6,7 @@ export interface Category {
   slug: string;
   color: string;
   icon?: string;
+  trackCount?: number;
   createdAt: string;
 }
 
@@ -23,6 +24,17 @@ export interface Track {
   categoryColor?: string;
   moodTags: string[];
   coverArtUrl?: string;
+  isFavorite?: boolean;
+  createdAt: string;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description?: string;
+  coverArtUrl?: string;
+  trackCount?: number;
+  tracks?: Track[];
   createdAt: string;
 }
 
