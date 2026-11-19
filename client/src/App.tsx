@@ -13,6 +13,7 @@ import { usePlayerStore } from './store/usePlayerStore';
 import { Category, Track, Playlist } from './types';
 import { PlaylistModal } from './components/library/PlaylistModal';
 import { AddToPlaylistMenu } from './components/library/AddToPlaylistMenu';
+import { ReelsFeed } from './components/player/ReelsFeed';
 import { 
   Music, 
   Upload, 
@@ -62,6 +63,8 @@ export default function App() {
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [isFavoritesOnly, setIsFavoritesOnly] = useState(false);
+  const [isReelsOpen, setIsReelsOpen] = useState(false);
+  const [reelsInitialTrackId, setReelsInitialTrackId] = useState<string | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -326,6 +329,10 @@ export default function App() {
                 setSelectedPlaylistId(null);
               }
             }}
+            onOpenReels={() => {
+              setReelsInitialTrackId(undefined);
+              setIsReelsOpen(true);
+            }}
           />
 
           {/* Playlist Hero Header (When viewing a specific playlist) */}
@@ -554,12 +561,27 @@ export default function App() {
                           </div>
                         )}
                         
-                        {/* Format Badge */}
-                        <span className={`absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded backdrop-blur-md ${
-                          isVideo ? 'bg-purple-600/90 text-white' : 'bg-black/60 text-white'
-                        }`}>
-                          {isVideo ? 'MP4 Video' : t.format.toUpperCase()}
-                        </span>
+                        {/* Format Badge / Reels Launcher */}
+                        <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded backdrop-blur-md ${
+                            isVideo ? 'bg-purple-600/90 text-white' : 'bg-black/60 text-white'
+                          }`}>
+                            {isVideo ? 'MP4 Video' : t.format.toUpperCase()}
+                          </span>
+                          {isVideo && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReelsInitialTrackId(t.id);
+                                setIsReelsOpen(true);
+                              }}
+                              title="Watch in Reels Feed"
+                              className="px-1.5 py-0.5 rounded bg-black/70 hover:bg-purple-700 text-[9px] font-bold text-white backdrop-blur-md border border-white/10 transition-colors"
+                            >
+                              🎬 Reel
+                            </button>
+                          )}
+                        </div>
 
                         {/* Play/Pause Button Overlay */}
                         <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
@@ -676,6 +698,19 @@ export default function App() {
         onClose={() => setIsPlaylistModalOpen(false)}
         onPlaylistCreated={handlePlaylistCreated}
       />
+
+      {/* Vertical Video Reels Feed */}
+      {isReelsOpen && (
+        <ReelsFeed
+          tracks={tracks}
+          playlists={playlists}
+          initialTrackId={reelsInitialTrackId}
+          onClose={() => setIsReelsOpen(false)}
+          onToggleLike={handleToggleLike}
+          onAddToPlaylist={handleAddToPlaylist}
+          onOpenCreatePlaylist={() => setIsPlaylistModalOpen(true)}
+        />
+      )}
     </>
   );
 }

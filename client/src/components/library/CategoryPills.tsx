@@ -10,6 +10,7 @@ interface CategoryPillsProps {
   onSelectFormat: (format: string | null) => void;
   isFavoritesOnly: boolean;
   onToggleFavorites: () => void;
+  onOpenReels?: () => void;
 }
 
 export const CategoryPills: React.FC<CategoryPillsProps> = ({
@@ -19,7 +20,8 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
   selectedFormat,
   onSelectFormat,
   isFavoritesOnly,
-  onToggleFavorites
+  onToggleFavorites,
+  onOpenReels
 }) => {
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar select-none">
@@ -72,6 +74,17 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
         <Film className="h-3.5 w-3.5" />
         <span>Videos (MP4)</span>
       </button>
+
+      {/* "Reels Feed" Chip */}
+      {onOpenReels && (
+        <button
+          onClick={onOpenReels}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all bg-gradient-to-r from-purple-600 via-pink-600 to-red-500 hover:opacity-90 text-white shadow-md shadow-pink-600/20"
+        >
+          <Film className="h-3.5 w-3.5" />
+          <span>Reels Feed</span>
+        </button>
+      )}
 
       {/* Dynamic Category Chips */}
       {categories.map((cat) => {
