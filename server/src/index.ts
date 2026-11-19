@@ -9,10 +9,13 @@ import tracksRouter from './routes/tracks.js';
 import streamRouter from './routes/stream.js';
 import aiRouter from './routes/ai.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from both root and server directories
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import { getAllTracks, getCategoriesWithCount } from '../db.js';
 
@@ -13,9 +14,10 @@ MySpoti Webapp Capabilities & Guide:
 4. Audio Mode vs Video Mode: In the Video Theater, click "Audio Mode" to minimize video and keep the audio playing in the background while browsing.
 5. Scrubbing & Seeking: Instant scrub/seek is powered by HTTP 206 Partial Content streaming without buffering the full file.
 6. Filtering & Searching: Use the top Category Pills to filter by category or view "Videos (MP4)" only. Use the top search bar to find songs by title, artist, category, or mood tag.
+7. Keyboard Shortcuts: Space (Play/Pause), Arrow Right/Left (+5s/-5s seek), M (Mute), Esc (Close modals).
 `;
 
-// Helper for heuristic fallback when Gemini API key is not configured
+// Helper for heuristic fallback when no API key is configured
 function getHeuristicRecommendation(prompt: string, tracks: any[]) {
   const lowerPrompt = prompt.toLowerCase();
   
@@ -82,14 +84,18 @@ function getHeuristicRecommendation(prompt: string, tracks: any[]) {
 // POST /api/ai/chat
 router.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { prompt, customApiKey } = req.body;
+    const { prompt, customApiKey, provider } = req.body;
 
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
       return res.status(400).json({ success: false, message: 'Prompt is required' });
     }
 
     const trimmedPrompt = prompt.trim();
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+
+    // Check for Groq API key (from .env or custom input)
+    const groqKey = process.env.GROQ_API_KEY || (customApiKey && customApiKey.startsWith('gsk_') ? customApiKey : undefined);
+    // Check for Gemini API key
+    const geminiKey = process.env.GEMINI_API_KEY || (customApiKey && !customApiKey.startsWith('gsk_') ? customApiKey : undefined);
 
     // Fetch user catalog from SQLite
     const rawTracks = getAllTracks();
@@ -104,21 +110,6 @@ router.post('/chat', async (req: Request, res: Response) => {
       moodTags: JSON.parse(t.mood_tags || '[]'),
       durationSeconds: Math.round(t.duration)
     }));
-
-    // If no API key provided, utilize smart local heuristic assistant
-    if (!apiKey) {
-      const fallback = getHeuristicRecommendation(trimmedPrompt, rawTracks);
-      return res.json({
-        success: true,
-        reply: fallback.reply,
-        suggestedTrackIds: fallback.suggestedTrackIds,
-        moodDetected: fallback.moodDetected,
-        isFallback: true
-      });
-    }
-
-    // Call Gemini API via @google/genai SDK
-    const ai = new GoogleGenAI({ apiKey });
 
     const systemInstruction = `
 You are the official AI DJ and in-app specialist for "MySpoti", a personal cloud Spotify clone web app.
@@ -146,44 +137,94 @@ Your Responsibilities:
   "suggestedTrackIds": ["track-id-1", "track-id-2"],
   "moodDetected": "Short mood tag or topic (e.g. High Energy, Late Night, App Help)"
 }
-Do NOT include markdown backticks around the JSON if possible, or use standard json blocks.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        { role: 'user', parts: [{ text: trimmedPrompt }] }
-      ],
-      config: {
-        systemInstruction,
-        responseMimeType: 'application/json'
+    // 1. Try Groq API first if GROQ_API_KEY is present
+    if (groqKey) {
+      try {
+        const groq = new Groq({ apiKey: groqKey });
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: trimmedPrompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.6
+        });
+
+        const content = completion.choices[0]?.message?.content || '{}';
+        const parsed = JSON.parse(content);
+
+        return res.json({
+          success: true,
+          reply: parsed.reply || 'Here is your custom DJ mix!',
+          suggestedTrackIds: Array.isArray(parsed.suggestedTrackIds) ? parsed.suggestedTrackIds : [],
+          moodDetected: parsed.moodDetected || 'Groq AI Vibe',
+          provider: 'Groq (LLaMA 3.3 70B)',
+          isFallback: false
+        });
+      } catch (groqErr) {
+        console.error('Groq API Error:', groqErr);
+        // If Groq fails and Gemini key exists, fall through to Gemini; otherwise use heuristic
+        if (!geminiKey) {
+          const fallback = getHeuristicRecommendation(trimmedPrompt, rawTracks);
+          return res.json({
+            success: true,
+            reply: fallback.reply,
+            suggestedTrackIds: fallback.suggestedTrackIds,
+            moodDetected: fallback.moodDetected,
+            provider: 'Local Assistant (Groq fallback)',
+            isFallback: true
+          });
+        }
       }
-    });
-
-    const responseText = response.text?.trim() || '';
-
-    try {
-      const parsed = JSON.parse(responseText);
-      res.json({
-        success: true,
-        reply: parsed.reply || 'Here is your custom DJ mix!',
-        suggestedTrackIds: Array.isArray(parsed.suggestedTrackIds) ? parsed.suggestedTrackIds : [],
-        moodDetected: parsed.moodDetected || 'Custom Vibe',
-        isFallback: false
-      });
-    } catch {
-      // Fallback clean extraction
-      res.json({
-        success: true,
-        reply: responseText,
-        suggestedTrackIds: [],
-        isFallback: false
-      });
     }
 
+    // 2. Try Gemini API if GEMINI_API_KEY is present
+    if (geminiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: geminiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            { role: 'user', parts: [{ text: trimmedPrompt }] }
+          ],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json'
+          }
+        });
+
+        const responseText = response.text?.trim() || '';
+        const parsed = JSON.parse(responseText);
+
+        return res.json({
+          success: true,
+          reply: parsed.reply || 'Here is your custom DJ mix!',
+          suggestedTrackIds: Array.isArray(parsed.suggestedTrackIds) ? parsed.suggestedTrackIds : [],
+          moodDetected: parsed.moodDetected || 'Gemini AI Vibe',
+          provider: 'Gemini 2.5 Flash',
+          isFallback: false
+        });
+      } catch (geminiErr) {
+        console.error('Gemini API Error:', geminiErr);
+      }
+    }
+
+    // 3. Fallback to smart local heuristic assistant
+    const fallback = getHeuristicRecommendation(trimmedPrompt, rawTracks);
+    return res.json({
+      success: true,
+      reply: fallback.reply,
+      suggestedTrackIds: fallback.suggestedTrackIds,
+      moodDetected: fallback.moodDetected,
+      provider: 'Local Smart Assistant',
+      isFallback: true
+    });
+
   } catch (error: any) {
-    console.error('Gemini AI API Error:', error);
-    // If Gemini API fails (quota or bad key), gracefully fallback to local recommendation
+    console.error('AI Route Error:', error);
     const rawTracks = getAllTracks();
     const fallback = getHeuristicRecommendation(req.body.prompt || '', rawTracks);
     res.json({
@@ -191,6 +232,7 @@ Do NOT include markdown backticks around the JSON if possible, or use standard j
       reply: fallback.reply,
       suggestedTrackIds: fallback.suggestedTrackIds,
       moodDetected: fallback.moodDetected,
+      provider: 'Local Smart Assistant',
       isFallback: true
     });
   }

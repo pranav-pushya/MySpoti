@@ -43,7 +43,9 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - `music-metadata` for ID3 tags and audio duration extraction.
   - HTTP 206 Partial Content byte-range streaming for instantaneous audio and video scrubbing.
 - **AI Engine**:
-  - Google Gemini API (`@google/genai`) for mood-based music curation and in-app assistance.
+  - Groq API (`groq-sdk` with `llama-3.3-70b-versatile`) loaded via `GROQ_API_KEY` in `.env` for ultra-fast sub-second mood recommendations and Q&A.
+  - Google Gemini API (`@google/genai`) support as alternative provider via `GEMINI_API_KEY`.
+  - Built-in smart local heuristic assistant fallback when no key is configured.
 
 ---
 

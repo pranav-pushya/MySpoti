@@ -10,9 +10,8 @@ import {
   Loader2, 
   Check, 
   HelpCircle,
-  Flame,
-  Coffee,
-  Moon
+  Zap,
+  Info
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
@@ -25,6 +24,7 @@ interface Message {
   suggestedTrackIds?: string[];
   suggestedTracks?: Track[];
   moodDetected?: string;
+  provider?: string;
   timestamp: string;
 }
 
@@ -51,9 +51,10 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('myspoti_gemini_key') || '');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('myspoti_ai_key') || '');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKey, setTempKey] = useState('');
+  const [activeProvider, setActiveProvider] = useState<string>('Groq / Gemini / Local');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +65,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
   if (!isAiDrawerOpen) return null;
 
   const handleSaveKey = () => {
-    localStorage.setItem('myspoti_gemini_key', tempKey.trim());
+    localStorage.setItem('myspoti_ai_key', tempKey.trim());
     setApiKey(tempKey.trim());
     setShowKeyModal(false);
   };
@@ -96,7 +97,10 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
       const data = await res.json();
 
       if (data.success) {
-        // Resolve suggested tracks
+        if (data.provider) {
+          setActiveProvider(data.provider);
+        }
+
         const suggestedTracks = (data.suggestedTrackIds || [])
           .map((id: string) => tracks.find(t => t.id === id))
           .filter(Boolean) as Track[];
@@ -108,6 +112,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
           suggestedTrackIds: data.suggestedTrackIds,
           suggestedTracks,
           moodDetected: data.moodDetected,
+          provider: data.provider,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
@@ -121,7 +126,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
         {
           id: (Date.now() + 1).toString(),
           sender: 'dj',
-          text: "I hit a snag connecting to the satellite DJ deck! Check your connection or API key in settings.",
+          text: "I hit a snag connecting to the AI deck! Check your .env file or API key in settings.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -140,14 +145,14 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10 bg-spotify-card/80">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-purple-600 to-spotify-green flex items-center justify-center shadow-md shadow-purple-600/30">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-spotify-green flex items-center justify-center shadow-md shadow-purple-600/30">
             <Sparkles className="h-5 w-5 text-black" />
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-tight flex items-center gap-1.5">
               <span>MySpoti AI DJ</span>
               <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">
-                Gemini 2.5
+                {activeProvider.includes('Groq') ? 'Groq LLaMA 3.3' : 'AI Powered'}
               </span>
             </h3>
             <p className="text-[11px] text-spotify-muted">Mood curation & Webapp support</p>
@@ -160,7 +165,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
               setTempKey(apiKey);
               setShowKeyModal(true);
             }}
-            title="Configure Gemini API Key"
+            title="Configure Groq / Gemini API Key"
             className="p-2 rounded-full hover:bg-spotify-highlight text-spotify-muted hover:text-white transition-colors"
           >
             <Key className="h-4 w-4" />
@@ -178,20 +183,20 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
       {showKeyModal && (
         <div className="p-4 bg-purple-950/40 border-b border-purple-500/30 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-200">Google Gemini API Key</span>
+            <span className="text-xs font-bold text-purple-200">Groq / Gemini API Key</span>
             <button onClick={() => setShowKeyModal(false)} className="text-spotify-muted hover:text-white">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
           <p className="text-[11px] text-purple-200/80">
-            Provide your Gemini API key for real-time generative recommendations, or leave blank to use the built-in smart assistant.
+            You can add <code>GROQ_API_KEY</code> directly to your <code>.env</code> file, or paste your Groq key here (starts with <code>gsk_...</code>).
           </p>
           <div className="flex gap-2">
             <input
               type="password"
               value={tempKey}
               onChange={(e) => setTempKey(e.target.value)}
-              placeholder="Paste AIzaSy... key"
+              placeholder="Paste gsk_... key"
               className="flex-1 h-8 px-2.5 rounded bg-black/60 border border-purple-500/40 text-xs text-white outline-none"
             />
             <button
@@ -263,7 +268,16 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
                 </div>
               )}
             </div>
-            <span className="text-[9px] text-spotify-muted mt-1 px-1">{msg.timestamp}</span>
+            
+            <div className="flex items-center gap-1.5 text-[9px] text-spotify-muted mt-1 px-1">
+              <span>{msg.timestamp}</span>
+              {msg.provider && (
+                <>
+                  <span>•</span>
+                  <span className="text-purple-300/80">{msg.provider}</span>
+                </>
+              )}
+            </div>
           </div>
         ))}
 
