@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, 
   Pause, 
@@ -12,11 +12,12 @@ import {
   Volume1, 
   Film, 
   Music, 
-  ChevronDown,
+  ChevronDown, 
   Maximize2,
   Heart
 } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { extractDominantColor, ExtractedColor } from '../../utils/colorExtractor';
 
 const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -52,6 +53,15 @@ export const PlayerBar: React.FC = () => {
 
   const [isSeeking, setIsSeeking] = useState(false);
   const [tempSeekTime, setTempSeekTime] = useState(0);
+  const [ambientColor, setAmbientColor] = useState<ExtractedColor | null>(null);
+
+  useEffect(() => {
+    if (currentTrack?.coverArtUrl) {
+      extractDominantColor(currentTrack.coverArtUrl).then(setAmbientColor);
+    } else {
+      setAmbientColor(null);
+    }
+  }, [currentTrack?.coverArtUrl]);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,7 +99,14 @@ export const PlayerBar: React.FC = () => {
       {/* ======================================================== */}
       {/* 1. DESKTOP & TABLET PLAYER BAR (md:flex)                 */}
       {/* ======================================================== */}
-      <div className="hidden md:flex h-20 bg-spotify-base/95 backdrop-blur-xl border-t border-white/10 px-4 items-center justify-between text-white select-none z-40">
+      <div 
+        className="hidden md:flex h-20 bg-spotify-base/95 backdrop-blur-xl border-t border-white/10 px-4 items-center justify-between text-white select-none z-40 transition-colors duration-700"
+        style={{
+          background: ambientColor
+            ? `linear-gradient(to top, rgba(18, 18, 18, 0.96), ${ambientColor.rgba(0.12)})`
+            : undefined
+        }}
+      >
         {/* Left Column: Track Info */}
         <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
           <div 
@@ -288,7 +305,12 @@ export const PlayerBar: React.FC = () => {
       {/* ======================================================== */}
       <div 
         onClick={toggleMobilePlayerExpanded}
-        className="md:hidden fixed bottom-14 left-2 right-2 h-14 bg-spotify-elevated/95 backdrop-blur-xl border border-white/10 rounded-lg flex items-center justify-between px-3 z-30 shadow-2xl cursor-pointer"
+        className="md:hidden fixed bottom-14 left-2 right-2 h-14 bg-spotify-elevated/95 backdrop-blur-xl border border-white/10 rounded-lg flex items-center justify-between px-3 z-30 shadow-2xl cursor-pointer transition-colors duration-700"
+        style={{
+          background: ambientColor
+            ? `linear-gradient(to right, rgba(28, 28, 28, 0.95), ${ambientColor.rgba(0.2)})`
+            : undefined
+        }}
       >
         {/* Top Progress Line */}
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/10 rounded-t-lg overflow-hidden">
@@ -355,7 +377,14 @@ export const PlayerBar: React.FC = () => {
       {/* 3. MOBILE FULL-SCREEN NOW-PLAYING SHEET (9:16 portrait)  */}
       {/* ======================================================== */}
       {isMobilePlayerExpanded && (
-        <div className="md:hidden fixed inset-0 z-50 bg-gradient-to-b from-spotify-card via-spotify-base to-black flex flex-col p-6 text-white animate-fade-in select-none">
+        <div 
+          className="md:hidden fixed inset-0 z-50 bg-gradient-to-b from-spotify-card via-spotify-base to-black flex flex-col p-6 text-white animate-fade-in select-none transition-colors duration-700"
+          style={{
+            background: ambientColor
+              ? `linear-gradient(to bottom, ${ambientColor.rgba(0.45)} 0%, rgba(18, 18, 18, 0.96) 60%, #000000 100%)`
+              : undefined
+          }}
+        >
           {/* Top Collapse Header */}
           <div className="flex items-center justify-between pb-4">
             <button 

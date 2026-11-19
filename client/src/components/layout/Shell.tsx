@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { useAppStore } from '../../store/useAppStore';
-
+import { usePlayerStore } from '../../store/usePlayerStore';
+import { extractDominantColor, ExtractedColor } from '../../utils/colorExtractor';
 import { Playlist } from '../../types';
 
 interface ShellProps {
@@ -35,6 +36,17 @@ export const Shell: React.FC<ShellProps> = ({
   aiDrawerSlot,
   uploadModalSlot
 }) => {
+  const { currentTrack } = usePlayerStore();
+  const [ambientColor, setAmbientColor] = useState<ExtractedColor | null>(null);
+
+  useEffect(() => {
+    if (currentTrack?.coverArtUrl) {
+      extractDominantColor(currentTrack.coverArtUrl).then(setAmbientColor);
+    } else {
+      setAmbientColor(null);
+    }
+  }, [currentTrack?.coverArtUrl]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans">
       {/* Left Sidebar (Desktop & Tablet) */}
@@ -51,7 +63,14 @@ export const Shell: React.FC<ShellProps> = ({
 
       {/* Main Container Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full p-2 pl-0 md:pl-0">
-        <div className="flex-1 flex flex-col bg-spotify-base rounded-lg overflow-hidden relative border border-white/5 shadow-2xl">
+        <div 
+          className="flex-1 flex flex-col bg-spotify-base rounded-lg overflow-hidden relative border border-white/5 shadow-2xl transition-all duration-700"
+          style={{
+            background: ambientColor
+              ? `radial-gradient(ellipse at 50% -10%, ${ambientColor.rgba(0.25)} 0%, rgba(18, 18, 18, 0.95) 55%, #121212 100%)`
+              : undefined
+          }}
+        >
           {/* Header */}
           <Header />
 

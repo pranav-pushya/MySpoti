@@ -453,4 +453,17 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 1*: Client TypeScript production build (`tsc && vite build`) passed with zero errors.
   - *Verification 2*: Monorepo root build (`npm run build`) succeeded with exit code 0 across both packages.
 
+#### Step 10.2: Shell & PlayerBar Dynamic Ambient Gradient Integration ✅
+- **What Was Done**:
+  - Integrated `extractDominantColor` in `Shell.tsx` to cast a soft top-down ambient radial glow across the main viewport matching the active track artwork with smooth 700ms CSS transitions.
+  - Injected dynamic ambient lighting across all player surfaces in `PlayerBar.tsx`:
+    - Desktop/Tablet bottom player bar with subtle bottom-up gradient.
+    - Mobile mini-player floating pill with horizontal ambient wash.
+    - Mobile 9:16 full-screen now-playing sheet with immersive full-height gradient transition.
+- **Why It Was Done**:
+  - Replicates Spotify's iconic immersive ambient color styling, making the UI feel vibrant and alive.
+- **Verification Details**:
+  - *Verification 1*: Client production build (`tsc && vite build`) succeeded with 2,154 modules transformed and zero errors.
+  - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
+
 ---
