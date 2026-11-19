@@ -120,9 +120,19 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying types and zero syntax errors.
   - *Verification 2*: Executed isolated runtime script initializing the database, seeding 6 categories, inserting a test track, querying category relations, and successfully deleting the record.
 
+#### Step 2.2: Category Management APIs ✅
+- **What Was Done**:
+  - Implemented category router in `server/src/routes/categories.ts`:
+    - `GET /api/categories`: Returns all categories with their associated track count.
+    - `POST /api/categories`: Enables creation of new custom categories with automatic slug generation, duplicate-name collision prevention, and default theme color assignment.
+  - Wired categories router into Express application at `/api/categories`.
+- **Why It Was Done**:
+  - Empowers users to organize their media into custom groupings and supplies dynamic category lists to both the UI filters and the AI recommendation engine.
+- **Verification Details**:
+  - *Verification 1*: Ran server TypeScript compilation (`tsc`) successfully without errors.
+  - *Verification 2*: Executed live HTTP API test on an isolated server instance confirming `GET /api/categories` returns HTTP 200 with the categories list and `POST /api/categories` creates a new custom category returning HTTP 201.
+
 ---
-  - Step 2.1: SQLite Database setup & migrations (`categories`, `tracks` tables).
-  - Step 2.2: Category management APIs (list, create, seed default categories).
   - Step 2.3: Multer file upload pipeline with MIME type checking.
   - Step 2.4: Metadata and video thumbnail extraction service.
   - Step 2.5: Track upload endpoint (`POST /api/tracks/upload`).

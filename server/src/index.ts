@@ -3,7 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initDb, getCategoriesWithCount } from './db.js';
+import { initDb } from './db.js';
+import categoriesRouter from './routes/categories.js';
 
 dotenv.config();
 
@@ -24,6 +25,9 @@ app.use(express.urlencoded({ extended: true }));
 // Static uploads directory
 const uploadsDir = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsDir));
+
+// Routes
+app.use('/api/categories', categoriesRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
