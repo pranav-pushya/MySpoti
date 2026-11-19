@@ -6,6 +6,7 @@ import { MediaController } from './components/player/MediaController';
 import { VideoTheater } from './components/player/VideoTheater';
 import { CategoryPills } from './components/library/CategoryPills';
 import { TrackTable } from './components/library/TrackTable';
+import { AiDjDrawer } from './components/ai/AiDjDrawer';
 import { useAppStore } from './store/useAppStore';
 import { usePlayerStore } from './store/usePlayerStore';
 import { Category, Track } from './types';
@@ -144,29 +145,7 @@ export default function App() {
           />
         }
         playerSlot={<PlayerBar />}
-        aiDrawerSlot={
-          isAiDrawerOpen && (
-            <div className="absolute top-0 right-0 bottom-0 w-full sm:w-80 md:w-96 bg-spotify-card/95 backdrop-blur-xl border-l border-white/10 z-50 flex flex-col p-4 shadow-2xl transition-all">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-400" />
-                  <h3 className="font-bold text-sm text-white">AI Mood DJ</h3>
-                </div>
-                <button 
-                  onClick={toggleAiDrawer}
-                  className="text-xs text-spotify-muted hover:text-white px-2 py-1 rounded bg-spotify-highlight"
-                >
-                  Close
-                </button>
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                <Sparkles className="h-8 w-8 text-purple-400 mb-2 animate-pulse" />
-                <p className="text-sm font-semibold text-white">Your Personal AI DJ</p>
-                <p className="text-xs text-spotify-muted mt-1">Ready to recommend tracks according to your mood once media is uploaded.</p>
-              </div>
-            </div>
-          )
-        }
+        aiDrawerSlot={<AiDjDrawer tracks={tracks} />}
       >
         <div className="p-4 sm:p-6 space-y-6">
           {/* Top Category Filter Chips Carousel */}

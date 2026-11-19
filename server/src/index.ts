@@ -7,6 +7,7 @@ import { initDb } from './db.js';
 import categoriesRouter from './routes/categories.js';
 import tracksRouter from './routes/tracks.js';
 import streamRouter from './routes/stream.js';
+import aiRouter from './routes/ai.js';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/categories', categoriesRouter);
 app.use('/api/tracks', tracksRouter);
 app.use('/api/stream', streamRouter);
+app.use('/api/ai', aiRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
