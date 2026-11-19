@@ -180,9 +180,23 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
 
 ---
-- **Phase 3: Spotify-Inspired Media Player (Audio & Video)**
-  - HTTP 206 Partial Content byte-range streaming for instant seeking.
-  - Global player Zustand store with queue management.
+
+### Phase 3: Spotify-Inspired Media Player (Audio & Video)
+
+#### Step 3.1: HTTP 206 Partial Content Streaming Endpoint ✅
+- **What Was Done**:
+  - Implemented `GET /api/stream/:id` in `server/src/routes/stream.ts`.
+  - Added full support for HTTP `Range` headers (e.g., `bytes=start-end`), computing chunk offsets, and responding with HTTP status `206 Partial Content`.
+  - Sent required streaming headers: `Content-Range`, `Accept-Ranges: bytes`, `Content-Length`, `Content-Type`, and stream pipelines via `fs.createReadStream(filePath, { start, end })`.
+  - Added support for full non-range playback fallback (HTTP 200).
+- **Why It Was Done**:
+  - Enables instantaneous media playback, zero-latency seeking/scrubbing, and smooth MP4 video playback without buffering the entire file into browser memory.
+- **Verification Details**:
+  - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying zero type or syntax errors.
+  - *Verification 2*: Executed live HTTP range streaming check requesting `Range: bytes=0-15` on a test track. Confirmed HTTP 206, validated `Content-Range: bytes 0-15/1024`, and confirmed exact 16-byte buffer payload.
+
+---
+  - Step 3.2: Global player Zustand store with queue management.
   - Bottom player bar (desktop full view, mobile mini-player + sheet).
   - Dual-mode MP4 video theater overlay with aspect ratio preservation.
 - **Phase 4: Library Browsing, Category Exploration & Search**

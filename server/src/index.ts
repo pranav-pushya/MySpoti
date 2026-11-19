@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { initDb } from './db.js';
 import categoriesRouter from './routes/categories.js';
 import tracksRouter from './routes/tracks.js';
+import streamRouter from './routes/stream.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/uploads', express.static(uploadsDir));
 // Routes
 app.use('/api/categories', categoriesRouter);
 app.use('/api/tracks', tracksRouter);
+app.use('/api/stream', streamRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
