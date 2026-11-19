@@ -11,8 +11,8 @@
   - Video Aspect Ratios: Support both 16:9 widescreen and 9:16 vertical/Reels-style MP4 music videos with aspect-ratio preservation.
 
 ## Git & Commits
-- **Do not commit automatically**: Only commit and push when the user explicitly instructs to do so.
-- **Commit message style**: Simple and short messages only (e.g., `fix navbar`, `update readme`, `add theme toggle`), never formal, verbose, or long professional commit messages.
+- **Automatic Step Commit & Push**: After every single step is thoroughly verified **two times** and confirmed working perfectly, immediately commit the changes and push to the remote repository.
+- **Commit message style**: Simple and short messages only (e.g., `fix navbar`, `update readme`, `add db schema`), never formal, verbose, or long professional commit messages.
 
 ## UI & Animation Stack
 When designing and implementing animations, consider the following libraries and components where they make sense, but **always ask for the user's confirmation before adding them**:
