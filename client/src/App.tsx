@@ -4,6 +4,8 @@ import { UploadModal } from './components/upload/UploadModal';
 import { PlayerBar } from './components/player/PlayerBar';
 import { MediaController } from './components/player/MediaController';
 import { VideoTheater } from './components/player/VideoTheater';
+import { CategoryPills } from './components/library/CategoryPills';
+import { TrackTable } from './components/library/TrackTable';
 import { useAppStore } from './store/useAppStore';
 import { usePlayerStore } from './store/usePlayerStore';
 import { Category, Track } from './types';
@@ -17,13 +19,17 @@ import {
   Clock, 
   Plus,
   Trash2,
-  ListMusic
+  LayoutGrid,
+  List,
+  Search
 } from 'lucide-react';
 
 export default function App() {
   const { 
     activeTab, 
+    setActiveTab,
     searchQuery, 
+    setSearchQuery,
     selectedCategory, 
     setSelectedCategory,
     setIsUploadModalOpen, 
@@ -35,12 +41,13 @@ export default function App() {
     currentTrack,
     isPlaying,
     playTrack,
-    togglePlay,
-    setQueue
+    togglePlay
   } = usePlayerStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch initial categories and tracks
@@ -74,7 +81,7 @@ export default function App() {
 
   const handleUploadSuccess = (newTrack: Track) => {
     setTracks(prev => [newTrack, ...prev]);
-    // Refresh categories to update track counts
+    // Refresh categories
     fetch('/api/categories')
       .then(r => r.json())
       .then(d => d.categories && setCategories(d.categories))
@@ -98,7 +105,6 @@ export default function App() {
       const res = await fetch(`/api/tracks/${trackId}`, { method: 'DELETE' });
       if (res.ok) {
         setTracks(prev => prev.filter(t => t.id !== trackId));
-        // Refresh categories count
         fetch('/api/categories')
           .then(r => r.json())
           .then(d => d.categories && setCategories(d.categories))
@@ -111,6 +117,7 @@ export default function App() {
 
   const filteredTracks = tracks.filter(t => {
     if (selectedCategory && t.categoryId !== selectedCategory) return false;
+    if (selectedFormat && t.format !== selectedFormat) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
@@ -162,56 +169,56 @@ export default function App() {
         }
       >
         <div className="p-4 sm:p-6 space-y-6">
-          {/* Welcome Hero Banner */}
-          <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-r from-purple-900/60 via-spotify-card to-spotify-base border border-white/10">
-            <div className="relative z-10 max-w-xl space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-spotify-green">Personal Cloud Music</span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Welcome to MySpoti</h1>
-              <p className="text-xs sm:text-sm text-spotify-subtext leading-relaxed">
-                Upload your MP4 video songs, MP3s, and music tracks. Group them by category and let your Gemini AI DJ queue up the perfect mood mix.
-              </p>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-xs sm:text-sm transition-all shadow-lg shadow-spotify-green/20"
-                >
-                  <Upload className="h-4 w-4 stroke-[2.5]" />
-                  <span>Upload Media</span>
-                </button>
-                <button
-                  onClick={toggleAiDrawer}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-elevated hover:bg-spotify-highlight text-white font-semibold text-xs sm:text-sm border border-white/10 transition-all"
-                >
-                  <Sparkles className="h-4 w-4 text-purple-400" />
-                  <span>Try AI Mood DJ</span>
-                </button>
+          {/* Top Category Filter Chips Carousel */}
+          <CategoryPills
+            categories={categories}
+            selectedCategoryId={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            selectedFormat={selectedFormat}
+            onSelectFormat={setSelectedFormat}
+          />
+
+          {/* Welcome Hero Banner (Only show when not actively searching) */}
+          {!searchQuery && !selectedCategory && !selectedFormat && (
+            <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-r from-purple-900/60 via-spotify-card to-spotify-base border border-white/10">
+              <div className="relative z-10 max-w-xl space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-spotify-green">Personal Cloud Music</span>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Welcome to MySpoti</h1>
+                <p className="text-xs sm:text-sm text-spotify-subtext leading-relaxed">
+                  Upload your MP4 video songs, MP3s, and music tracks. Group them by category and let your Gemini AI DJ queue up the perfect mood mix.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-xs sm:text-sm transition-all shadow-lg shadow-spotify-green/20"
+                  >
+                    <Upload className="h-4 w-4 stroke-[2.5]" />
+                    <span>Upload Media</span>
+                  </button>
+                  <button
+                    onClick={toggleAiDrawer}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-elevated hover:bg-spotify-highlight text-white font-semibold text-xs sm:text-sm border border-white/10 transition-all"
+                  >
+                    <Sparkles className="h-4 w-4 text-purple-400" />
+                    <span>Try AI Mood DJ</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Categories Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white tracking-tight">Explore Categories</h2>
-              {selectedCategory && (
-                <button
-                  onClick={() => setSelectedCategory(null)}
-                  className="text-xs text-spotify-green hover:underline font-semibold"
-                >
-                  Clear Filter
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {categories.map((cat: any) => {
-                const isSelected = selectedCategory === cat.id;
-                return (
+          {/* Category Cards (When no search & no filter) */}
+          {!searchQuery && !selectedCategory && !selectedFormat && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white tracking-tight">Explore Categories</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {categories.map((cat: any) => (
                   <div
                     key={cat.id}
-                    onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
-                    className={`group relative h-28 sm:h-32 rounded-lg p-3 overflow-hidden cursor-pointer transition-all hover:scale-[1.02] shadow-lg flex flex-col justify-between ${
-                      isSelected ? 'ring-2 ring-white scale-[1.02]' : ''
-                    }`}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className="group relative h-28 sm:h-32 rounded-lg p-3 overflow-hidden cursor-pointer transition-all hover:scale-[1.02] shadow-lg flex flex-col justify-between"
                     style={{ backgroundColor: cat.color || '#1db954' }}
                   >
                     <span className="font-bold text-sm sm:text-base text-white drop-shadow-sm">{cat.name}</span>
@@ -224,22 +231,52 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Uploaded Tracks Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                {selectedCategory 
-                  ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
-                  : 'Recently Uploaded Media'}
-              </h2>
-              <span className="text-xs text-spotify-muted font-medium">{filteredTracks.length} items</span>
+          {/* Uploaded Tracks View Section */}
+          <div className="space-y-4">
+            {/* Section Header with View Mode Toggles */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <div>
+                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>
+                    {searchQuery
+                      ? `Search Results for "${searchQuery}"`
+                      : selectedCategory
+                        ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
+                        : selectedFormat === 'mp4'
+                          ? 'MP4 Music Videos'
+                          : 'Your Uploaded Media'}
+                  </span>
+                  <span className="text-xs font-normal text-spotify-muted">
+                    ({filteredTracks.length})
+                  </span>
+                </h2>
+              </div>
+
+              {/* View Mode Controls */}
+              <div className="flex items-center gap-1 bg-spotify-highlight p-1 rounded-lg border border-white/5">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-spotify-elevated text-white' : 'text-spotify-muted hover:text-white'}`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-spotify-elevated text-white' : 'text-spotify-muted hover:text-white'}`}
+                  title="List View"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
+            {/* Empty state */}
             {filteredTracks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-white/15 p-8 text-center space-y-3 bg-spotify-card/40">
                 <div className="mx-auto h-12 w-12 rounded-full bg-spotify-highlight flex items-center justify-center text-spotify-muted">
@@ -247,9 +284,13 @@ export default function App() {
                 </div>
                 <h3 className="text-base font-bold text-white">No tracks found</h3>
                 <p className="text-xs text-spotify-muted max-w-sm mx-auto">
-                  {selectedCategory 
-                    ? 'No songs or videos uploaded in this category yet. Upload a track and assign it here!'
-                    : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
+                  {searchQuery
+                    ? `No matches found for "${searchQuery}". Try a different keyword.`
+                    : selectedCategory
+                      ? 'No songs or videos uploaded in this category yet. Upload a track and select this category!'
+                      : selectedFormat === 'mp4'
+                        ? 'No MP4 music videos found. Upload a video file to watch here!'
+                        : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
                 </p>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
@@ -259,7 +300,13 @@ export default function App() {
                   <span>Upload Media</span>
                 </button>
               </div>
+            ) : viewMode === 'list' ? (
+              /* List / Table View */
+              <div className="bg-spotify-card/40 rounded-xl p-2 border border-white/5">
+                <TrackTable tracks={filteredTracks} onDeleteTrack={handleDeleteTrack} />
+              </div>
             ) : (
+              /* Grid View */
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3">
                 {filteredTracks.map((t) => {
                   const isVideo = t.format === 'mp4' || t.format === 'webm';
