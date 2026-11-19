@@ -4,9 +4,15 @@ import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { useAppStore } from '../../store/useAppStore';
 
+import { Playlist } from '../../types';
+
 interface ShellProps {
   children: React.ReactNode;
   categories?: { id: string; name: string; color: string }[];
+  playlists?: Playlist[];
+  selectedPlaylistId?: string | null;
+  onSelectPlaylist?: (id: string | null) => void;
+  onOpenCreatePlaylist?: () => void;
   likedCount?: number;
   isFavoritesOnly?: boolean;
   onToggleFavorites?: () => void;
@@ -18,6 +24,10 @@ interface ShellProps {
 export const Shell: React.FC<ShellProps> = ({
   children,
   categories = [],
+  playlists = [],
+  selectedPlaylistId = null,
+  onSelectPlaylist,
+  onOpenCreatePlaylist,
   likedCount = 0,
   isFavoritesOnly = false,
   onToggleFavorites,
@@ -30,6 +40,10 @@ export const Shell: React.FC<ShellProps> = ({
       {/* Left Sidebar (Desktop & Tablet) */}
       <Sidebar 
         categories={categories} 
+        playlists={playlists}
+        selectedPlaylistId={selectedPlaylistId}
+        onSelectPlaylist={onSelectPlaylist}
+        onOpenCreatePlaylist={onOpenCreatePlaylist}
         likedCount={likedCount}
         isFavoritesOnly={isFavoritesOnly}
         onToggleFavorites={onToggleFavorites}

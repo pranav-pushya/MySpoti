@@ -1,12 +1,18 @@
 import React from 'react';
-import { Track } from '../../types';
-import { Play, Pause, Clock, Trash2, Film, Music, Heart } from 'lucide-react';
+import { Track, Playlist } from '../../types';
+import { Play, Pause, Clock, Trash2, Film, Music, Heart, MinusCircle } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 
 interface TrackTableProps {
   tracks: Track[];
+  playlists?: Playlist[];
   onDeleteTrack: (e: React.MouseEvent, trackId: string) => void;
   onToggleLike: (e: React.MouseEvent, trackId: string) => void;
+  onAddToPlaylist?: (playlistId: string, trackId: string) => Promise<boolean | void>;
+  onRemoveFromPlaylist?: (trackId: string) => void;
+  isPlaylistView?: boolean;
+  onOpenCreatePlaylist?: () => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -16,7 +22,16 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack, onToggleLike }) => {
+export const TrackTable: React.FC<TrackTableProps> = ({ 
+  tracks, 
+  playlists = [],
+  onDeleteTrack, 
+  onToggleLike,
+  onAddToPlaylist,
+  onRemoveFromPlaylist,
+  isPlaylistView = false,
+  onOpenCreatePlaylist
+}) => {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayerStore();
 
   return (
@@ -125,16 +140,43 @@ export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack, o
                 </span>
               </div>
 
-              {/* Col 5: Duration & Delete Action */}
-              <div className="col-span-1 sm:col-span-2 flex items-center justify-end gap-3 pr-2 text-spotify-muted font-mono">
-                <span className="text-[11px]">{formatDuration(track.duration)}</span>
-                <button
-                  onClick={(e) => onDeleteTrack(e, track.id)}
-                  title="Delete track"
-                  className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              {/* Col 5: Duration & Actions */}
+              <div className="col-span-1 sm:col-span-2 flex items-center justify-end gap-2 pr-2 text-spotify-muted font-mono">
+                <span className="text-[11px] mr-1">{formatDuration(track.duration)}</span>
+                
+                {/* Add to Playlist button */}
+                {onAddToPlaylist && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <AddToPlaylistMenu
+                      trackId={track.id}
+                      playlists={playlists}
+                      onAddToPlaylist={onAddToPlaylist}
+                      onOpenCreatePlaylist={onOpenCreatePlaylist}
+                    />
+                  </div>
+                )}
+
+                {/* Remove from Playlist (if inside playlist) or Delete Track */}
+                {isPlaylistView && onRemoveFromPlaylist ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveFromPlaylist(track.id);
+                    }}
+                    title="Remove from playlist"
+                    className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-1"
+                  >
+                    <MinusCircle className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => onDeleteTrack(e, track.id)}
+                    title="Delete track"
+                    className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity p-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           );

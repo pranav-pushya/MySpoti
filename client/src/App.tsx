@@ -10,7 +10,9 @@ import { AiDjDrawer } from './components/ai/AiDjDrawer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAppStore } from './store/useAppStore';
 import { usePlayerStore } from './store/usePlayerStore';
-import { Category, Track } from './types';
+import { Category, Track, Playlist } from './types';
+import { PlaylistModal } from './components/library/PlaylistModal';
+import { AddToPlaylistMenu } from './components/library/AddToPlaylistMenu';
 import { 
   Music, 
   Upload, 
@@ -24,7 +26,8 @@ import {
   LayoutGrid,
   List,
   Search,
-  Heart
+  Heart,
+  ListMusic
 } from 'lucide-react';
 
 export default function App() {
@@ -53,18 +56,23 @@ export default function App() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [currentPlaylistDetails, setCurrentPlaylistDetails] = useState<Playlist | null>(null);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [isFavoritesOnly, setIsFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch initial categories and tracks
+  // Fetch initial categories, tracks, and playlists
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [catRes, trackRes] = await Promise.all([
+      const [catRes, trackRes, playlistRes] = await Promise.all([
         fetch('/api/categories'),
-        fetch('/api/tracks')
+        fetch('/api/tracks'),
+        fetch('/api/playlists')
       ]);
 
       if (catRes.ok) {
@@ -76,6 +84,11 @@ export default function App() {
         const trackData = await trackRes.json();
         setTracks(trackData.tracks || []);
       }
+
+      if (playlistRes.ok) {
+        const plData = await playlistRes.json();
+        setPlaylists(plData.playlists || []);
+      }
     } catch (err) {
       console.error('Failed to fetch library data:', err);
     } finally {
@@ -86,6 +99,91 @@ export default function App() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Fetch individual playlist details when a playlist is selected
+  const fetchPlaylistDetails = async (id: string) => {
+    try {
+      const res = await fetch(`/api/playlists/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentPlaylistDetails(data.playlist);
+      }
+    } catch (err) {
+      console.error('Failed to fetch playlist details:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPlaylistId) {
+      fetchPlaylistDetails(selectedPlaylistId);
+    } else {
+      setCurrentPlaylistDetails(null);
+    }
+  }, [selectedPlaylistId]);
+
+  const handlePlaylistCreated = (newPlaylist: Playlist) => {
+    setPlaylists(prev => [newPlaylist, ...prev]);
+    setSelectedPlaylistId(newPlaylist.id);
+    setIsFavoritesOnly(false);
+    setSelectedCategory(null);
+  };
+
+  const handleAddToPlaylist = async (playlistId: string, trackId: string) => {
+    try {
+      const res = await fetch(`/api/playlists/${playlistId}/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackId })
+      });
+      if (res.ok) {
+        // Refresh playlists counts
+        const plRes = await fetch('/api/playlists');
+        if (plRes.ok) {
+          const plData = await plRes.json();
+          setPlaylists(plData.playlists || []);
+        }
+        if (selectedPlaylistId === playlistId) {
+          fetchPlaylistDetails(playlistId);
+        }
+      }
+    } catch (err) {
+      console.error('Add to playlist error:', err);
+    }
+  };
+
+  const handleRemoveTrackFromPlaylist = async (trackId: string) => {
+    if (!selectedPlaylistId) return;
+    try {
+      const res = await fetch(`/api/playlists/${selectedPlaylistId}/tracks/${trackId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        fetchPlaylistDetails(selectedPlaylistId);
+        const plRes = await fetch('/api/playlists');
+        if (plRes.ok) {
+          const plData = await plRes.json();
+          setPlaylists(plData.playlists || []);
+        }
+      }
+    } catch (err) {
+      console.error('Remove from playlist error:', err);
+    }
+  };
+
+  const handleDeletePlaylist = async (playlistId: string) => {
+    if (!confirm('Are you sure you want to delete this playlist?')) return;
+    try {
+      const res = await fetch(`/api/playlists/${playlistId}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (selectedPlaylistId === playlistId) {
+          setSelectedPlaylistId(null);
+        }
+        setPlaylists(prev => prev.filter(p => p.id !== playlistId));
+      }
+    } catch (err) {
+      console.error('Delete playlist error:', err);
+    }
+  };
 
   const handleUploadSuccess = (newTrack: Track) => {
     setTracks(prev => [newTrack, ...prev]);
@@ -147,10 +245,12 @@ export default function App() {
 
   const likedCount = tracks.filter(t => t.isFavorite).length;
 
-  const filteredTracks = tracks.filter(t => {
-    if (isFavoritesOnly && !t.isFavorite) return false;
-    if (selectedCategory && t.categoryId !== selectedCategory) return false;
-    if (selectedFormat && t.format !== selectedFormat) return false;
+  const displayedTracks = (selectedPlaylistId && currentPlaylistDetails ? currentPlaylistDetails.tracks || [] : tracks).filter(t => {
+    if (!selectedPlaylistId) {
+      if (isFavoritesOnly && !t.isFavorite) return false;
+      if (selectedCategory && t.categoryId !== selectedCategory) return false;
+      if (selectedFormat && t.format !== selectedFormat) return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
@@ -169,12 +269,23 @@ export default function App() {
 
       <Shell
         categories={categories}
+        playlists={playlists}
+        selectedPlaylistId={selectedPlaylistId}
+        onSelectPlaylist={(id) => {
+          setSelectedPlaylistId(id);
+          if (id) {
+            setIsFavoritesOnly(false);
+            setSelectedCategory(null);
+          }
+        }}
+        onOpenCreatePlaylist={() => setIsPlaylistModalOpen(true)}
         likedCount={likedCount}
         isFavoritesOnly={isFavoritesOnly}
         onToggleFavorites={() => {
           setIsFavoritesOnly(prev => !prev);
           setSelectedCategory(null);
           setSelectedFormat(null);
+          setSelectedPlaylistId(null);
         }}
         uploadModalSlot={
           <UploadModal
@@ -193,12 +304,18 @@ export default function App() {
             selectedCategoryId={selectedCategory}
             onSelectCategory={(id) => {
               setSelectedCategory(id);
-              if (id) setIsFavoritesOnly(false);
+              if (id) {
+                setIsFavoritesOnly(false);
+                setSelectedPlaylistId(null);
+              }
             }}
             selectedFormat={selectedFormat}
             onSelectFormat={(format) => {
               setSelectedFormat(format);
-              if (format) setIsFavoritesOnly(false);
+              if (format) {
+                setIsFavoritesOnly(false);
+                setSelectedPlaylistId(null);
+              }
             }}
             isFavoritesOnly={isFavoritesOnly}
             onToggleFavorites={() => {
@@ -206,12 +323,59 @@ export default function App() {
               if (!isFavoritesOnly) {
                 setSelectedCategory(null);
                 setSelectedFormat(null);
+                setSelectedPlaylistId(null);
               }
             }}
           />
 
-          {/* Welcome Hero Banner (Only show when not actively searching and not in filter) */}
-          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && (
+          {/* Playlist Hero Header (When viewing a specific playlist) */}
+          {selectedPlaylistId && currentPlaylistDetails && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 p-6 rounded-xl bg-gradient-to-b from-indigo-900/60 via-spotify-card to-spotify-base border border-white/10 shadow-2xl">
+              <div className="h-32 w-32 sm:h-40 sm:w-40 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center text-white shadow-2xl shrink-0">
+                <ListMusic className="h-16 w-16" />
+              </div>
+              <div className="space-y-2 flex-1 min-w-0">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-spotify-muted">Public Playlist</span>
+                <h1 className="text-2xl sm:text-4xl font-extrabold text-white truncate tracking-tight">
+                  {currentPlaylistDetails.name}
+                </h1>
+                {currentPlaylistDetails.description && (
+                  <p className="text-xs sm:text-sm text-spotify-subtext line-clamp-2">
+                    {currentPlaylistDetails.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 text-xs text-spotify-muted">
+                  <span className="font-semibold text-white">MySpoti Cloud</span>
+                  <span>•</span>
+                  <span>{displayedTracks.length} tracks</span>
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      if (displayedTracks.length > 0) {
+                        playTrack(displayedTracks[0], displayedTracks);
+                      }
+                    }}
+                    disabled={displayedTracks.length === 0}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-spotify-green hover:bg-spotify-greenHover disabled:opacity-50 text-black font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Play className="h-4 w-4 fill-black ml-0.5" />
+                    <span>Play All</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeletePlaylist(currentPlaylistDetails.id)}
+                    title="Delete Playlist"
+                    className="p-2.5 rounded-full text-spotify-muted hover:text-red-400 hover:bg-white/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Welcome Hero Banner (Only show when not actively searching, not in filter, and not in playlist) */}
+          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && !selectedPlaylistId && (
             <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-r from-purple-900/60 via-spotify-card to-spotify-base border border-white/10">
               <div className="relative z-10 max-w-xl space-y-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-spotify-green">Personal Cloud Music</span>
@@ -239,8 +403,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Category Cards (When no search & no filter) */}
-          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && (
+          {/* Category Cards (When no search, no filter, and no playlist) */}
+          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && !selectedPlaylistId && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-white tracking-tight">Explore Categories</h2>
@@ -277,16 +441,18 @@ export default function App() {
                   <span>
                     {searchQuery
                       ? `Search Results for "${searchQuery}"`
-                      : isFavoritesOnly
-                        ? 'Liked Songs'
-                        : selectedCategory
-                          ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
-                          : selectedFormat === 'mp4'
-                            ? 'MP4 Music Videos'
-                            : 'Your Uploaded Media'}
+                      : selectedPlaylistId
+                        ? `Tracks in ${currentPlaylistDetails?.name || 'Playlist'}`
+                        : isFavoritesOnly
+                          ? 'Liked Songs'
+                          : selectedCategory
+                            ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
+                            : selectedFormat === 'mp4'
+                              ? 'MP4 Music Videos'
+                              : 'Your Uploaded Media'}
                   </span>
                   <span className="text-xs font-normal text-spotify-muted">
-                    ({filteredTracks.length})
+                    ({displayedTracks.length})
                   </span>
                 </h2>
               </div>
@@ -311,24 +477,36 @@ export default function App() {
             </div>
 
             {/* Empty state */}
-            {filteredTracks.length === 0 ? (
+            {displayedTracks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-white/15 p-8 text-center space-y-3 bg-spotify-card/40">
                 <div className="mx-auto h-12 w-12 rounded-full bg-spotify-highlight flex items-center justify-center text-spotify-muted">
-                  {isFavoritesOnly ? <Heart className="h-6 w-6 text-pink-400" /> : <Music className="h-6 w-6" />}
+                  {selectedPlaylistId ? (
+                    <ListMusic className="h-6 w-6 text-spotify-green" />
+                  ) : isFavoritesOnly ? (
+                    <Heart className="h-6 w-6 text-pink-400" />
+                  ) : (
+                    <Music className="h-6 w-6" />
+                  )}
                 </div>
                 <h3 className="text-base font-bold text-white">
-                  {isFavoritesOnly ? 'No liked songs yet' : 'No tracks found'}
+                  {selectedPlaylistId 
+                    ? 'This playlist is empty' 
+                    : isFavoritesOnly 
+                      ? 'No liked songs yet' 
+                      : 'No tracks found'}
                 </h3>
                 <p className="text-xs text-spotify-muted max-w-sm mx-auto">
                   {searchQuery
                     ? `No matches found for "${searchQuery}". Try a different keyword.`
-                    : isFavoritesOnly
-                      ? 'Click the heart icon on any song or video card to add it to your Liked Songs collection.'
-                      : selectedCategory
-                        ? 'No songs or videos uploaded in this category yet. Upload a track and select this category!'
-                        : selectedFormat === 'mp4'
-                          ? 'No MP4 music videos found. Upload a video file to watch here!'
-                          : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
+                    : selectedPlaylistId
+                      ? 'Add songs or music videos to this playlist from your library using the playlist button on any track.'
+                      : isFavoritesOnly
+                        ? 'Click the heart icon on any song or video card to add it to your Liked Songs collection.'
+                        : selectedCategory
+                          ? 'No songs or videos uploaded in this category yet. Upload a track and select this category!'
+                          : selectedFormat === 'mp4'
+                            ? 'No MP4 music videos found. Upload a video file to watch here!'
+                            : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
                 </p>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
@@ -342,22 +520,27 @@ export default function App() {
               /* List / Table View */
               <div className="bg-spotify-card/40 rounded-xl p-2 border border-white/5">
                 <TrackTable 
-                  tracks={filteredTracks} 
+                  tracks={displayedTracks} 
+                  playlists={playlists}
                   onDeleteTrack={handleDeleteTrack}
                   onToggleLike={handleToggleLike}
+                  onAddToPlaylist={handleAddToPlaylist}
+                  onRemoveFromPlaylist={selectedPlaylistId ? handleRemoveTrackFromPlaylist : undefined}
+                  isPlaylistView={!!selectedPlaylistId}
+                  onOpenCreatePlaylist={() => setIsPlaylistModalOpen(true)}
                 />
               </div>
             ) : (
               /* Grid View */
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3">
-                {filteredTracks.map((t) => {
+                {displayedTracks.map((t) => {
                   const isVideo = t.format === 'mp4' || t.format === 'webm';
                   const isCurrent = currentTrack?.id === t.id;
 
                   return (
                     <div
                       key={t.id}
-                      onClick={() => playTrack(t, filteredTracks)}
+                      onClick={() => playTrack(t, displayedTracks)}
                       className={`group bg-spotify-card hover:bg-spotify-cardHover p-3 rounded-lg border transition-all duration-200 flex flex-col justify-between cursor-pointer ${
                         isCurrent ? 'border-spotify-green/60 shadow-lg shadow-spotify-green/10' : 'border-white/5'
                       }`}
@@ -388,7 +571,7 @@ export default function App() {
                               if (isCurrent) {
                                 togglePlay();
                               } else {
-                                playTrack(t, filteredTracks);
+                                playTrack(t, displayedTracks);
                               }
                             }}
                             className="h-10 w-10 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-transform"
@@ -419,13 +602,32 @@ export default function App() {
                             >
                               <Heart className={`h-3.5 w-3.5 ${t.isFavorite ? 'fill-current' : ''}`} />
                             </button>
-                            <button
-                              onClick={(e) => handleDeleteTrack(e, t.id)}
-                              title="Delete track"
-                              className="text-spotify-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            <AddToPlaylistMenu
+                              trackId={t.id}
+                              playlists={playlists}
+                              onAddToPlaylist={handleAddToPlaylist}
+                              onOpenCreatePlaylist={() => setIsPlaylistModalOpen(true)}
+                            />
+                            {selectedPlaylistId ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveTrackFromPlaylist(t.id);
+                                }}
+                                title="Remove from playlist"
+                                className="text-spotify-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => handleDeleteTrack(e, t.id)}
+                                title="Delete track"
+                                className="text-spotify-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -467,6 +669,13 @@ export default function App() {
           </div>
         </div>
       </Shell>
+
+      {/* Playlist Creation Modal */}
+      <PlaylistModal
+        isOpen={isPlaylistModalOpen}
+        onClose={() => setIsPlaylistModalOpen(false)}
+        onPlaylistCreated={handlePlaylistCreated}
+      />
     </>
   );
 }
