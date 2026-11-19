@@ -132,11 +132,54 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 1*: Ran server TypeScript compilation (`tsc`) successfully without errors.
   - *Verification 2*: Executed live HTTP API test on an isolated server instance confirming `GET /api/categories` returns HTTP 200 with the categories list and `POST /api/categories` creates a new custom category returning HTTP 201.
 
+#### Step 2.3: Multer Upload Pipeline ✅
+- **What Was Done**:
+  - Implemented disk storage engine in `server/src/utils/uploader.ts` saving media files to `server/uploads/` with UUID-based unique filenames.
+  - Added format verification for `.mp4`, `.mp3`, `.wav`, `.ogg`, `.flac`, `.m4a`, and `.webm`, supporting file sizes up to 250MB.
+- **Why It Was Done**:
+  - Provides reliable, high-capacity multipart file streaming and storage on disk while preventing naming collisions.
+- **Verification Details**:
+  - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying types and zero errors.
+  - *Verification 2*: Executed live multipart upload test uploading a real audio buffer and verifying storage on disk at `server/uploads/`.
+
+#### Step 2.4: Metadata & Video Thumbnail Extraction ✅
+- **What Was Done**:
+  - Built extraction service in `server/src/utils/metadata.ts` using `music-metadata`.
+  - Automatically parses track duration, title, artist, and embedded cover art (APIC tags). Saves extracted artwork into `server/uploads/covers/`.
+  - Implemented graceful fallback: extracts clean track titles from filenames when ID3 tags are missing.
+- **Why It Was Done**:
+  - Automates catalog tagging so uploaded files immediately display durations, titles, and album covers without manual user entry.
+- **Verification Details**:
+  - *Verification 1*: TypeScript compilation passed with zero errors.
+  - *Verification 2*: Runtime verification test confirmed duration parsing and fallback filename cleaning.
+
+#### Step 2.5: Track Upload API Endpoint ✅
+- **What Was Done**:
+  - Created `POST /api/tracks/upload` in `server/src/routes/tracks.ts` processing uploaded media, metadata extraction, optional on-the-fly category creation, and SQLite database storage.
+  - Added `GET /api/tracks` (with category, search, and format filters) and `DELETE /api/tracks/:id`.
+- **Why It Was Done**:
+  - Bridges file uploads with database persistence and allows the frontend to retrieve filtered playlists.
+- **Verification Details**:
+  - *Verification 1*: TypeScript compile verified all route signatures and database helper calls.
+  - *Verification 2*: Integration test uploaded a file with a dynamic category and mood tags, verified HTTP 201 response, validated SQLite persistence, and successfully deleted the test record.
+
+#### Step 2.6: Responsive Drag & Drop Upload Modal UI ✅
+- **What Was Done**:
+  - Built `client/src/components/upload/UploadModal.tsx` featuring:
+    - Drag-and-drop file dropzone with format validation and live size preview.
+    - Title and Artist inputs with automatic clean filename pre-filling.
+    - Category dropdown with inline **"➕ Create New Category"** input.
+    - 10 Preset Mood Tags (*Energetic, Relaxed, Lo-Fi, Workout, Late Night, Focus, Party, Melancholic, Cozy, Uplifting*) + custom tag input for Gemini AI DJ.
+    - Upload progress bar and state feedback.
+    - Responsive layout adapting from a centered modal on desktop to a bottom-drawer sheet on mobile.
+  - Connected upload modal in `client/src/App.tsx`, triggering instant library re-fetch upon upload.
+- **Why It Was Done**:
+  - Gives users a Spotify-native upload experience that works seamlessly on mobile portrait touchscreens, tablets, and desktop displays.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript production build (`tsc && vite build`) transformed 2,141 modules and built bundles with zero errors.
+  - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
+
 ---
-  - Step 2.3: Multer file upload pipeline with MIME type checking.
-  - Step 2.4: Metadata and video thumbnail extraction service.
-  - Step 2.5: Track upload endpoint (`POST /api/tracks/upload`).
-  - Step 2.6: Responsive upload modal with drag-and-drop & category selection.
 - **Phase 3: Spotify-Inspired Media Player (Audio & Video)**
   - HTTP 206 Partial Content byte-range streaming for instant seeking.
   - Global player Zustand store with queue management.

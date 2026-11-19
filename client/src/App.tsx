@@ -1,29 +1,93 @@
 import React, { useState, useEffect } from 'react';
 import { Shell } from './components/layout/Shell';
+import { UploadModal } from './components/upload/UploadModal';
 import { useAppStore } from './store/useAppStore';
-import { Music, Upload, Sparkles, FolderHeart, Play, Film } from 'lucide-react';
+import { Category, Track } from './types';
+import { Music, Upload, Sparkles, FolderHeart, Play, Film, Clock } from 'lucide-react';
 
 export default function App() {
   const { 
     activeTab, 
     searchQuery, 
     selectedCategory, 
+    setSelectedCategory,
     setIsUploadModalOpen, 
-    toggleAiDrawer,
+    toggleAiDrawer, 
     isAiDrawerOpen 
   } = useAppStore();
 
-  const [categories, setCategories] = useState<{ id: string; name: string; color: string }[]>([
-    { id: '1', name: 'Chill & Relax', color: '#1db954' },
-    { id: '2', name: 'Workout Beats', color: '#e91429' },
-    { id: '3', name: 'Lo-Fi Focus', color: '#8c67ac' },
-    { id: '4', name: 'Pop Hits', color: '#1e3264' },
-    { id: '5', name: 'Rock Classics', color: '#e8115b' }
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch initial categories and tracks
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [catRes, trackRes] = await Promise.all([
+        fetch('/api/categories'),
+        fetch('/api/tracks')
+      ]);
+
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(catData.categories || []);
+      }
+
+      if (trackRes.ok) {
+        const trackData = await trackRes.json();
+        setTracks(trackData.tracks || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch library data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleUploadSuccess = (newTrack: Track) => {
+    setTracks(prev => [newTrack, ...prev]);
+    // Refresh categories to update track counts
+    fetch('/api/categories')
+      .then(r => r.json())
+      .then(d => d.categories && setCategories(d.categories))
+      .catch(console.error);
+  };
+
+  const handleCategoryCreated = (newCat: Category) => {
+    setCategories(prev => {
+      if (prev.some(c => c.id === newCat.id)) return prev;
+      return [...prev, newCat];
+    });
+  };
+
+  const filteredTracks = tracks.filter(t => {
+    if (selectedCategory && t.categoryId !== selectedCategory) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = t.title.toLowerCase().includes(q);
+      const matchArtist = t.artist.toLowerCase().includes(q);
+      const matchCat = t.categoryName?.toLowerCase().includes(q);
+      const matchMood = t.moodTags?.some(m => m.toLowerCase().includes(q));
+      return matchTitle || matchArtist || matchCat || matchMood;
+    }
+    return true;
+  });
 
   return (
     <Shell
       categories={categories}
+      uploadModalSlot={
+        <UploadModal
+          categories={categories}
+          onUploadSuccess={handleUploadSuccess}
+          onCategoryCreated={handleCategoryCreated}
+        />
+      }
       playerSlot={
         <div className="h-16 md:h-20 bg-spotify-highlight/95 backdrop-blur-md border-t border-white/10 px-4 flex items-center justify-between text-xs text-spotify-muted">
           <div className="flex items-center gap-3">
@@ -41,7 +105,7 @@ export default function App() {
               className="px-3 py-1.5 rounded-full bg-spotify-green text-black font-semibold text-xs flex items-center gap-1.5 hover:scale-105 transition-all"
             >
               <Upload className="h-3.5 w-3.5" />
-              <span>Upload Track</span>
+              <span>Upload Media</span>
             </button>
           </div>
         </div>
@@ -82,9 +146,9 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={() => setIsUploadModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-xs sm:text-sm transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-xs sm:text-sm transition-all shadow-lg shadow-spotify-green/20"
               >
-                <Upload className="h-4 w-4" />
+                <Upload className="h-4 w-4 stroke-[2.5]" />
                 <span>Upload Media</span>
               </button>
               <button
@@ -102,44 +166,142 @@ export default function App() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-white tracking-tight">Explore Categories</h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {categories.map((cat) => (
-              <div
-                key={cat.id}
-                className="group relative h-28 sm:h-32 rounded-lg p-3 overflow-hidden cursor-pointer transition-all hover:scale-[1.02] shadow-lg flex flex-col justify-between"
-                style={{ backgroundColor: cat.color }}
+            {selectedCategory && (
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="text-xs text-spotify-green hover:underline font-semibold"
               >
-                <span className="font-bold text-sm sm:text-base text-white drop-shadow-sm">{cat.name}</span>
-                <div className="flex justify-between items-end">
-                  <span className="text-[10px] text-white/80 font-medium bg-black/30 px-2 py-0.5 rounded backdrop-blur-sm">
-                    0 tracks
-                  </span>
-                  <div className="h-8 w-8 rounded-full bg-spotify-green text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                    <Play className="h-4 w-4 fill-black ml-0.5" />
+                Clear Filter
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {categories.map((cat: any) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
+                  className={`group relative h-28 sm:h-32 rounded-lg p-3 overflow-hidden cursor-pointer transition-all hover:scale-[1.02] shadow-lg flex flex-col justify-between ${
+                    isSelected ? 'ring-2 ring-white scale-[1.02]' : ''
+                  }`}
+                  style={{ backgroundColor: cat.color || '#1db954' }}
+                >
+                  <span className="font-bold text-sm sm:text-base text-white drop-shadow-sm">{cat.name}</span>
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] text-white/80 font-medium bg-black/30 px-2 py-0.5 rounded backdrop-blur-sm">
+                      {cat.trackCount || 0} tracks
+                    </span>
+                    <div className="h-8 w-8 rounded-full bg-spotify-green text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                      <Play className="h-4 w-4 fill-black ml-0.5" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Empty Library State Preview */}
-        <div className="rounded-xl border border-dashed border-white/15 p-8 text-center space-y-3 bg-spotify-card/40">
-          <div className="mx-auto h-12 w-12 rounded-full bg-spotify-highlight flex items-center justify-center text-spotify-muted">
-            <Music className="h-6 w-6" />
+        {/* Uploaded Tracks Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white tracking-tight">
+              {selectedCategory 
+                ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
+                : 'Recently Uploaded Media'}
+            </h2>
+            <span className="text-xs text-spotify-muted font-medium">{filteredTracks.length} items</span>
           </div>
-          <h3 className="text-base font-bold text-white">Your uploaded library is empty</h3>
-          <p className="text-xs text-spotify-muted max-w-sm mx-auto">
-            Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.
-          </p>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="px-4 py-2 rounded-full bg-white text-black font-bold text-xs hover:bg-white/90 transition-all inline-flex items-center gap-2"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            <span>Upload Your First Track</span>
-          </button>
+
+          {filteredTracks.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/15 p-8 text-center space-y-3 bg-spotify-card/40">
+              <div className="mx-auto h-12 w-12 rounded-full bg-spotify-highlight flex items-center justify-center text-spotify-muted">
+                <Music className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-bold text-white">No tracks found</h3>
+              <p className="text-xs text-spotify-muted max-w-sm mx-auto">
+                {selectedCategory 
+                  ? 'No songs or videos uploaded in this category yet. Upload a track and assign it here!'
+                  : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
+              </p>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="px-4 py-2 rounded-full bg-white text-black font-bold text-xs hover:bg-white/90 transition-all inline-flex items-center gap-2 shadow-lg"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Upload Media</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3">
+              {filteredTracks.map((t) => {
+                const isVideo = t.format === 'mp4' || t.format === 'webm';
+                return (
+                  <div
+                    key={t.id}
+                    className="group bg-spotify-card hover:bg-spotify-cardHover p-3 rounded-lg border border-white/5 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div className="relative aspect-video rounded-md bg-spotify-elevated overflow-hidden mb-2.5 flex items-center justify-center">
+                      {t.coverArtUrl ? (
+                        <img src={t.coverArtUrl} alt={t.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-spotify-muted gap-1">
+                          {isVideo ? <Film className="h-8 w-8 text-spotify-green/80" /> : <Music className="h-8 w-8 text-spotify-green/80" />}
+                        </div>
+                      )}
+                      
+                      {/* Format Badge */}
+                      <span className={`absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded backdrop-blur-md ${
+                        isVideo ? 'bg-purple-600/90 text-white' : 'bg-black/60 text-white'
+                      }`}>
+                        {isVideo ? 'MP4 Video' : t.format.toUpperCase()}
+                      </span>
+
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button className="h-10 w-10 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
+                          <Play className="h-5 w-5 fill-black ml-0.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-white truncate">{t.title}</h4>
+                      <p className="text-[11px] text-spotify-muted truncate">{t.artist}</p>
+                      
+                      <div className="flex items-center justify-between pt-1 text-[10px] text-spotify-muted">
+                        {t.categoryName && (
+                          <span 
+                            className="px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                            style={{ backgroundColor: `${t.categoryColor || '#1db954'}25`, color: t.categoryColor || '#1db954' }}
+                          >
+                            {t.categoryName}
+                          </span>
+                        )}
+                        {t.duration > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            {Math.floor(t.duration / 60)}:{String(Math.floor(t.duration % 60)).padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Mood Tags */}
+                      {t.moodTags && t.moodTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {t.moodTags.slice(0, 3).map((mood, idx) => (
+                            <span key={idx} className="text-[9px] px-1.5 py-0.2 rounded bg-white/5 text-spotify-subtext">
+                              #{mood}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </Shell>
