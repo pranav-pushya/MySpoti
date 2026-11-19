@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import { uploadMedia } from '../utils/uploader.js';
 import { extractMediaMetadata } from '../utils/metadata.js';
 import { 
@@ -159,7 +161,23 @@ router.post('/upload', uploadMedia.single('media'), async (req: Request, res: Re
       }
     }
 
-    // 5. Insert into SQLite
+    // 5. Check for client-captured video frame or cover art
+    let finalCoverArtUrl = metadata.coverArtUrl;
+    if (!finalCoverArtUrl && req.body.coverArtBase64 && typeof req.body.coverArtBase64 === 'string') {
+      try {
+        const base64Data = req.body.coverArtBase64.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        const artFileName = `frame-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+        const uploadsDir = path.dirname(file.path);
+        const artFilePath = path.join(uploadsDir, artFileName);
+        fs.writeFileSync(artFilePath, buffer);
+        finalCoverArtUrl = `/uploads/${artFileName}`;
+      } catch (err) {
+        console.warn('Failed to save captured video frame:', err);
+      }
+    }
+
+    // 6. Insert into SQLite
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
     const relativeFilePath = `uploads/${file.filename}`;
 
@@ -173,7 +191,7 @@ router.post('/upload', uploadMedia.single('media'), async (req: Request, res: Re
       duration: metadata.duration,
       categoryId: finalCategoryId,
       moodTags,
-      coverArtUrl: metadata.coverArtUrl,
+      coverArtUrl: finalCoverArtUrl,
       isFavorite: false
     });
 

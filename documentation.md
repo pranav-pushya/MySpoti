@@ -467,3 +467,18 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
 
 ---
+
+### Phase 11: 🎬 Automatic Video Frame Capture & Reels-Style Vertical Feed
+
+#### Step 11.1: Automatic Video Frame Capture for MP4 Uploads ✅
+- **What Was Done**:
+  - Added real-time client-side video frame capture in `UploadModal.tsx` using an offscreen HTML5 `<video>` element seeking to 2.5s (or 15% duration) and drawing onto a canvas.
+  - Visual frame preview rendered directly in the upload modal dropzone immediately upon selecting an MP4 or WebM video.
+  - Added server-side pipeline in `server/src/routes/tracks.ts` to decode `coverArtBase64` and persist it to `/uploads/frame-*.jpg`, ensuring every uploaded video automatically possesses a high-resolution cover thumbnail without requiring third-party CLI tools.
+- **Why It Was Done**:
+  - Solves the common streaming issue where raw MP4 videos have no cover art, turning generic placeholders into vibrant visual thumbnails.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript production build (`tsc && vite build`) passed with zero errors.
+  - *Verification 2*: Monorepo root build (`npm run build`) succeeded with exit code 0 across both packages.
+
+---

@@ -48,6 +48,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [customMood, setCustomMood] = useState('');
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
+  const [isCapturingThumbnail, setIsCapturingThumbnail] = useState(false);
   
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -64,6 +66,45 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   if (!isUploadModalOpen) return null;
 
+  const captureVideoThumbnail = (videoFile: File) => {
+    setIsCapturingThumbnail(true);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(videoFile);
+    video.src = url;
+
+    video.onloadeddata = () => {
+      // Seek to 2.5s or 15% of duration
+      video.currentTime = Math.min(2.5, (video.duration || 10) * 0.15);
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(640, video.videoWidth || 640);
+        canvas.height = Math.min(360, video.videoHeight || 360);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setVideoThumbnail(dataUrl);
+        }
+      } catch (err) {
+        console.warn('Frame capture error:', err);
+      } finally {
+        setIsCapturingThumbnail(false);
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    video.onerror = () => {
+      setIsCapturingThumbnail(false);
+      URL.revokeObjectURL(url);
+    };
+  };
+
   const handleFileSelection = (selectedFile: File) => {
     setErrorMessage('');
     const ext = selectedFile.name.split('.').pop()?.toLowerCase();
@@ -75,6 +116,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }
 
     setFile(selectedFile);
+
+    // If video file, capture thumbnail frame automatically
+    if (ext === 'mp4' || ext === 'webm') {
+      captureVideoThumbnail(selectedFile);
+    } else {
+      setVideoThumbnail(null);
+    }
+
     // Auto-fill clean title from filename if empty
     if (!title) {
       const baseName = selectedFile.name.substring(0, selectedFile.name.lastIndexOf('.')) || selectedFile.name;
@@ -118,6 +167,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setNewCategoryName('');
     setSelectedMoods([]);
     setCustomMood('');
+    setVideoThumbnail(null);
+    setIsCapturingThumbnail(false);
     setUploadProgress(0);
     setErrorMessage('');
   };
@@ -152,6 +203,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       }
 
       formData.append('moodTags', JSON.stringify(selectedMoods));
+
+      if (videoThumbnail) {
+        formData.append('coverArtBase64', videoThumbnail);
+      }
 
       setUploadProgress(50);
 
@@ -257,17 +312,32 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             {file ? (
               <div className="flex items-center justify-between text-left">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-spotify-elevated flex items-center justify-center text-spotify-green">
-                    {isVideo ? <Film className="h-5 w-5" /> : <Music className="h-5 w-5" />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
+                  {videoThumbnail ? (
+                    <div className="relative h-12 w-20 rounded-md overflow-hidden bg-black border border-white/10 shrink-0">
+                      <img src={videoThumbnail} alt="Captured Frame" className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0.5 right-1 px-1 py-0.2 bg-black/70 text-[8px] font-bold uppercase rounded text-purple-300">
+                        Frame
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg bg-spotify-elevated flex items-center justify-center text-spotify-green shrink-0">
+                      {isCapturingThumbnail ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+                      ) : isVideo ? (
+                        <Film className="h-5 w-5" />
+                      ) : (
+                        <Music className="h-5 w-5" />
+                      )}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate max-w-[180px] sm:max-w-xs">{file.name}</p>
                     <p className="text-[11px] text-spotify-muted">
                       {(file.size / (1024 * 1024)).toFixed(2)} MB • {isVideo ? 'MP4 Video' : 'Audio Track'}
                     </p>
                   </div>
                 </div>
-                <span className="text-xs font-semibold text-spotify-green px-2.5 py-1 rounded-full bg-spotify-green/15">
+                <span className="text-xs font-semibold text-spotify-green px-2.5 py-1 rounded-full bg-spotify-green/15 shrink-0 ml-2">
                   Selected
                 </span>
               </div>
