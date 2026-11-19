@@ -293,7 +293,7 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - Built `client/src/components/ai/AiDjDrawer.tsx` featuring:
     - Chat message stream with distinct user and AI DJ bubbles.
     - 5 Quick Starter Chips (*"⚡ Workout Energy"*, *"🌧️ Cozy Chill"*, *"🌙 Late Night Focus"*, *"🎥 Video Tracks"*, *"❓ How to use Video Mode?"*).
-    - In-app Google Gemini API key configuration modal with `localStorage` persistence.
+    - Exclusively consumes `GROQ_API_KEY` directly from the `.env` configuration file on the server (in-app client key prompt removed for cleaner UX and enhanced security).
     - Actionable playlist preview inside chat bubbles displaying suggested track cards.
     - One-click **"▶ Play Queue"** button that immediately loads the AI DJ's picks into `usePlayerStore` and begins playback.
   - Integrated into responsive shell (slide-over drawer on desktop, bottom sheet on mobile).

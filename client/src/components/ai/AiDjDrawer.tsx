@@ -4,14 +4,9 @@ import {
   X, 
   Send, 
   Play, 
-  Key, 
   Film, 
   Music, 
-  Loader2, 
-  Check, 
-  HelpCircle,
-  Zap,
-  Info
+  Loader2
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
@@ -45,16 +40,13 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
     {
       id: 'welcome',
       sender: 'dj',
-      text: "Yo! I'm your MySpoti AI DJ. Tell me your mood, what you're doing, or ask me any question about the webapp and I'll spin the right tracks from your library!",
+      text: "Yo! I'm your MySpoti AI DJ powered by Groq. Tell me your mood, what you're doing, or ask me any question about the webapp and I'll spin the right tracks from your library!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('myspoti_ai_key') || '');
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [tempKey, setTempKey] = useState('');
-  const [activeProvider, setActiveProvider] = useState<string>('Groq / Gemini / Local');
+  const [activeProvider, setActiveProvider] = useState<string>('Groq LLaMA 3.3');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -63,12 +55,6 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
   }, [messages, isLoading]);
 
   if (!isAiDrawerOpen) return null;
-
-  const handleSaveKey = () => {
-    localStorage.setItem('myspoti_ai_key', tempKey.trim());
-    setApiKey(tempKey.trim());
-    setShowKeyModal(false);
-  };
 
   const sendMessage = async (promptText: string) => {
     if (!promptText.trim() || isLoading) return;
@@ -89,8 +75,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: promptText,
-          customApiKey: apiKey || undefined
+          prompt: promptText
         })
       });
 
@@ -126,7 +111,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
         {
           id: (Date.now() + 1).toString(),
           sender: 'dj',
-          text: "I hit a snag connecting to the AI deck! Check your .env file or API key in settings.",
+          text: "I hit a snag connecting to the AI deck! Ensure GROQ_API_KEY is configured in your .env file.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -161,16 +146,6 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
 
         <div className="flex items-center gap-1">
           <button
-            onClick={() => {
-              setTempKey(apiKey);
-              setShowKeyModal(true);
-            }}
-            title="Configure Groq / Gemini API Key"
-            className="p-2 rounded-full hover:bg-spotify-highlight text-spotify-muted hover:text-white transition-colors"
-          >
-            <Key className="h-4 w-4" />
-          </button>
-          <button
             onClick={toggleAiDrawer}
             className="p-2 rounded-full hover:bg-spotify-highlight text-spotify-muted hover:text-white transition-colors"
           >
@@ -178,36 +153,6 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
           </button>
         </div>
       </div>
-
-      {/* API Key Modal */}
-      {showKeyModal && (
-        <div className="p-4 bg-purple-950/40 border-b border-purple-500/30 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-200">Groq / Gemini API Key</span>
-            <button onClick={() => setShowKeyModal(false)} className="text-spotify-muted hover:text-white">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <p className="text-[11px] text-purple-200/80">
-            You can add <code>GROQ_API_KEY</code> directly to your <code>.env</code> file, or paste your Groq key here (starts with <code>gsk_...</code>).
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              placeholder="Paste gsk_... key"
-              className="flex-1 h-8 px-2.5 rounded bg-black/60 border border-purple-500/40 text-xs text-white outline-none"
-            />
-            <button
-              onClick={handleSaveKey}
-              className="px-3 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">

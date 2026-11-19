@@ -84,7 +84,7 @@ function getHeuristicRecommendation(prompt: string, tracks: any[]) {
 // POST /api/ai/chat
 router.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { prompt, customApiKey, provider } = req.body;
+    const { prompt } = req.body;
 
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
       return res.status(400).json({ success: false, message: 'Prompt is required' });
@@ -92,10 +92,10 @@ router.post('/chat', async (req: Request, res: Response) => {
 
     const trimmedPrompt = prompt.trim();
 
-    // Check for Groq API key (from .env or custom input)
-    const groqKey = process.env.GROQ_API_KEY || (customApiKey && customApiKey.startsWith('gsk_') ? customApiKey : undefined);
-    // Check for Gemini API key
-    const geminiKey = process.env.GEMINI_API_KEY || (customApiKey && !customApiKey.startsWith('gsk_') ? customApiKey : undefined);
+    // Check for Groq API key from .env
+    const groqKey = process.env.GROQ_API_KEY;
+    // Check for Gemini API key from .env
+    const geminiKey = process.env.GEMINI_API_KEY;
 
     // Fetch user catalog from SQLite
     const rawTracks = getAllTracks();
