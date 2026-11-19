@@ -1,11 +1,12 @@
 import React from 'react';
 import { Track } from '../../types';
-import { Play, Pause, Clock, Trash2, Film, Music } from 'lucide-react';
+import { Play, Pause, Clock, Trash2, Film, Music, Heart } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 
 interface TrackTableProps {
   tracks: Track[];
   onDeleteTrack: (e: React.MouseEvent, trackId: string) => void;
+  onToggleLike: (e: React.MouseEvent, trackId: string) => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -15,7 +16,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack }) => {
+export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack, onToggleLike }) => {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayerStore();
 
   return (
@@ -67,7 +68,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack })
                 </button>
               </div>
 
-              {/* Col 2: Thumbnail, Title & Artist */}
+              {/* Col 2: Thumbnail, Title, Artist & Heart */}
               <div className="col-span-10 sm:col-span-5 flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 rounded bg-spotify-elevated shrink-0 overflow-hidden flex items-center justify-center">
                   {track.coverArtUrl ? (
@@ -84,6 +85,18 @@ export const TrackTable: React.FC<TrackTableProps> = ({ tracks, onDeleteTrack })
                   </p>
                   <p className="text-[11px] text-spotify-muted truncate">{track.artist}</p>
                 </div>
+
+                <button
+                  onClick={(e) => onToggleLike(e, track.id)}
+                  title={track.isFavorite ? 'Unlike' : 'Like'}
+                  className={`p-1.5 transition-colors shrink-0 ${
+                    track.isFavorite 
+                      ? 'text-spotify-green' 
+                      : 'text-spotify-muted opacity-0 group-hover:opacity-100 hover:text-white'
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${track.isFavorite ? 'fill-current' : ''}`} />
+                </button>
               </div>
 
               {/* Col 3: Category */}

@@ -347,4 +347,20 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying types and zero errors.
   - *Verification 2*: Executed live API test on isolated port verifying like toggle, playlist creation, track addition, playlist track query, and cascading deletion.
 
+#### Step 7.2: Liked Songs UI & Favorite Toggle Integration ✅
+- **What Was Done**:
+  - Added dedicated **"Liked Songs"** chip to `CategoryPills.tsx` and a permanent gradient-card link in `Sidebar.tsx` displaying live liked track count.
+  - Added interactive heart toggle buttons across all player surfaces:
+    - **Desktop Player Bar**: Heart toggle next to track metadata.
+    - **Mobile Mini-Player & Full-Screen Sheet**: Heart toggle button with smooth micro-interactions.
+    - **List View (`TrackTable.tsx`)**: Dedicated heart column with fill animation.
+    - **Grid View (`App.tsx`)**: Heart toggle on each media card.
+  - Added `toggleCurrentTrackFavorite` to `usePlayerStore.ts` ensuring player bar and library state remain in sync.
+  - Connected `isFavoritesOnly` state in `App.tsx` and `Shell.tsx` to instantly filter uploaded tracks down to liked songs.
+- **Why It Was Done**:
+  - Gives users instant 1-click access to save, curate, and browse their favorite songs and videos across mobile, tablet, and desktop views.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript production build (`tsc && vite build`) passed with zero errors, bundling cleanly.
+  - *Verification 2*: Monorepo root build (`npm run build`) succeeded across both server and client packages with exit code 0.
+
 ---

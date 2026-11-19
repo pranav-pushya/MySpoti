@@ -37,6 +37,7 @@ interface PlayerState {
   setIsMobilePlayerExpanded: (expanded: boolean) => void;
   addToQueue: (track: Track) => void;
   setQueue: (tracks: Track[]) => void;
+  toggleCurrentTrackFavorite: () => void;
 }
 
 // Retrieve persisted volume
@@ -210,5 +211,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   setQueue: (tracks) => {
     set({ queue: tracks });
+  },
+
+  toggleCurrentTrackFavorite: () => {
+    const { currentTrack } = get();
+    if (!currentTrack) return;
+    const newStatus = !currentTrack.isFavorite;
+    set({
+      currentTrack: { ...currentTrack, isFavorite: newStatus }
+    });
   }
 }));

@@ -23,7 +23,8 @@ import {
   Trash2,
   LayoutGrid,
   List,
-  Search
+  Search,
+  Heart
 } from 'lucide-react';
 
 export default function App() {
@@ -43,7 +44,8 @@ export default function App() {
     currentTrack,
     isPlaying,
     playTrack,
-    togglePlay
+    togglePlay,
+    toggleCurrentTrackFavorite
   } = usePlayerStore();
 
   // Initialize global keyboard shortcuts (Space, Arrow keys, M, Esc)
@@ -52,6 +54,7 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [isFavoritesOnly, setIsFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -120,7 +123,32 @@ export default function App() {
     }
   };
 
+  const handleToggleLike = async (e: React.MouseEvent, trackId: string) => {
+    e.stopPropagation();
+    // Optimistically update tracks list
+    setTracks(prev => prev.map(t => {
+      if (t.id === trackId) {
+        return { ...t, isFavorite: !t.isFavorite };
+      }
+      return t;
+    }));
+
+    // If current playing track is the one liked/unliked, sync player state
+    if (currentTrack?.id === trackId) {
+      toggleCurrentTrackFavorite();
+    }
+
+    try {
+      await fetch(`/api/tracks/${trackId}/like`, { method: 'POST' });
+    } catch (err) {
+      console.error('Like toggle error:', err);
+    }
+  };
+
+  const likedCount = tracks.filter(t => t.isFavorite).length;
+
   const filteredTracks = tracks.filter(t => {
+    if (isFavoritesOnly && !t.isFavorite) return false;
     if (selectedCategory && t.categoryId !== selectedCategory) return false;
     if (selectedFormat && t.format !== selectedFormat) return false;
     if (searchQuery) {
@@ -141,6 +169,13 @@ export default function App() {
 
       <Shell
         categories={categories}
+        likedCount={likedCount}
+        isFavoritesOnly={isFavoritesOnly}
+        onToggleFavorites={() => {
+          setIsFavoritesOnly(prev => !prev);
+          setSelectedCategory(null);
+          setSelectedFormat(null);
+        }}
         uploadModalSlot={
           <UploadModal
             categories={categories}
@@ -156,13 +191,27 @@ export default function App() {
           <CategoryPills
             categories={categories}
             selectedCategoryId={selectedCategory}
-            onSelectCategory={setSelectedCategory}
+            onSelectCategory={(id) => {
+              setSelectedCategory(id);
+              if (id) setIsFavoritesOnly(false);
+            }}
             selectedFormat={selectedFormat}
-            onSelectFormat={setSelectedFormat}
+            onSelectFormat={(format) => {
+              setSelectedFormat(format);
+              if (format) setIsFavoritesOnly(false);
+            }}
+            isFavoritesOnly={isFavoritesOnly}
+            onToggleFavorites={() => {
+              setIsFavoritesOnly(prev => !prev);
+              if (!isFavoritesOnly) {
+                setSelectedCategory(null);
+                setSelectedFormat(null);
+              }
+            }}
           />
 
-          {/* Welcome Hero Banner (Only show when not actively searching) */}
-          {!searchQuery && !selectedCategory && !selectedFormat && (
+          {/* Welcome Hero Banner (Only show when not actively searching and not in filter) */}
+          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && (
             <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-r from-purple-900/60 via-spotify-card to-spotify-base border border-white/10">
               <div className="relative z-10 max-w-xl space-y-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-spotify-green">Personal Cloud Music</span>
@@ -191,7 +240,7 @@ export default function App() {
           )}
 
           {/* Category Cards (When no search & no filter) */}
-          {!searchQuery && !selectedCategory && !selectedFormat && (
+          {!searchQuery && !selectedCategory && !selectedFormat && !isFavoritesOnly && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-white tracking-tight">Explore Categories</h2>
@@ -228,11 +277,13 @@ export default function App() {
                   <span>
                     {searchQuery
                       ? `Search Results for "${searchQuery}"`
-                      : selectedCategory
-                        ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
-                        : selectedFormat === 'mp4'
-                          ? 'MP4 Music Videos'
-                          : 'Your Uploaded Media'}
+                      : isFavoritesOnly
+                        ? 'Liked Songs'
+                        : selectedCategory
+                          ? `Tracks in ${categories.find(c => c.id === selectedCategory)?.name || 'Category'}`
+                          : selectedFormat === 'mp4'
+                            ? 'MP4 Music Videos'
+                            : 'Your Uploaded Media'}
                   </span>
                   <span className="text-xs font-normal text-spotify-muted">
                     ({filteredTracks.length})
@@ -263,17 +314,21 @@ export default function App() {
             {filteredTracks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-white/15 p-8 text-center space-y-3 bg-spotify-card/40">
                 <div className="mx-auto h-12 w-12 rounded-full bg-spotify-highlight flex items-center justify-center text-spotify-muted">
-                  <Music className="h-6 w-6" />
+                  {isFavoritesOnly ? <Heart className="h-6 w-6 text-pink-400" /> : <Music className="h-6 w-6" />}
                 </div>
-                <h3 className="text-base font-bold text-white">No tracks found</h3>
+                <h3 className="text-base font-bold text-white">
+                  {isFavoritesOnly ? 'No liked songs yet' : 'No tracks found'}
+                </h3>
                 <p className="text-xs text-spotify-muted max-w-sm mx-auto">
                   {searchQuery
                     ? `No matches found for "${searchQuery}". Try a different keyword.`
-                    : selectedCategory
-                      ? 'No songs or videos uploaded in this category yet. Upload a track and select this category!'
-                      : selectedFormat === 'mp4'
-                        ? 'No MP4 music videos found. Upload a video file to watch here!'
-                        : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
+                    : isFavoritesOnly
+                      ? 'Click the heart icon on any song or video card to add it to your Liked Songs collection.'
+                      : selectedCategory
+                        ? 'No songs or videos uploaded in this category yet. Upload a track and select this category!'
+                        : selectedFormat === 'mp4'
+                          ? 'No MP4 music videos found. Upload a video file to watch here!'
+                          : 'Drag and drop MP4 music videos, MP3s, or WAV files to start building your personal streaming collection.'}
                 </p>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
@@ -286,7 +341,11 @@ export default function App() {
             ) : viewMode === 'list' ? (
               /* List / Table View */
               <div className="bg-spotify-card/40 rounded-xl p-2 border border-white/5">
-                <TrackTable tracks={filteredTracks} onDeleteTrack={handleDeleteTrack} />
+                <TrackTable 
+                  tracks={filteredTracks} 
+                  onDeleteTrack={handleDeleteTrack}
+                  onToggleLike={handleToggleLike}
+                />
               </div>
             ) : (
               /* Grid View */
@@ -345,16 +404,29 @@ export default function App() {
 
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <h4 className={`text-xs font-bold truncate ${isCurrent ? 'text-spotify-green' : 'text-white'}`}>
+                          <h4 className={`text-xs font-bold truncate flex-1 pr-1 ${isCurrent ? 'text-spotify-green' : 'text-white'}`}>
                             {t.title}
                           </h4>
-                          <button
-                            onClick={(e) => handleDeleteTrack(e, t.id)}
-                            title="Delete track"
-                            className="text-spotify-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={(e) => handleToggleLike(e, t.id)}
+                              title={t.isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
+                              className={`p-1 rounded transition-colors ${
+                                t.isFavorite 
+                                  ? 'text-spotify-green' 
+                                  : 'text-spotify-muted hover:text-white opacity-0 group-hover:opacity-100'
+                              }`}
+                            >
+                              <Heart className={`h-3.5 w-3.5 ${t.isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteTrack(e, t.id)}
+                              title="Delete track"
+                              className="text-spotify-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
 
                         <p className="text-[11px] text-spotify-muted truncate">{t.artist}</p>

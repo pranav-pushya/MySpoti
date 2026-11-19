@@ -7,6 +7,9 @@ import { useAppStore } from '../../store/useAppStore';
 interface ShellProps {
   children: React.ReactNode;
   categories?: { id: string; name: string; color: string }[];
+  likedCount?: number;
+  isFavoritesOnly?: boolean;
+  onToggleFavorites?: () => void;
   playerSlot?: React.ReactNode;
   aiDrawerSlot?: React.ReactNode;
   uploadModalSlot?: React.ReactNode;
@@ -15,6 +18,9 @@ interface ShellProps {
 export const Shell: React.FC<ShellProps> = ({
   children,
   categories = [],
+  likedCount = 0,
+  isFavoritesOnly = false,
+  onToggleFavorites,
   playerSlot,
   aiDrawerSlot,
   uploadModalSlot
@@ -22,7 +28,12 @@ export const Shell: React.FC<ShellProps> = ({
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans">
       {/* Left Sidebar (Desktop & Tablet) */}
-      <Sidebar categories={categories} />
+      <Sidebar 
+        categories={categories} 
+        likedCount={likedCount}
+        isFavoritesOnly={isFavoritesOnly}
+        onToggleFavorites={onToggleFavorites}
+      />
 
       {/* Main Container Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full p-2 pl-0 md:pl-0">

@@ -13,7 +13,8 @@ import {
   Film, 
   Music, 
   ChevronDown,
-  Maximize2
+  Maximize2,
+  Heart
 } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 
@@ -45,11 +46,23 @@ export const PlayerBar: React.FC = () => {
     toggleShuffle,
     toggleRepeat,
     toggleVideoTheater,
-    toggleMobilePlayerExpanded
+    toggleMobilePlayerExpanded,
+    toggleCurrentTrackFavorite
   } = usePlayerStore();
 
   const [isSeeking, setIsSeeking] = useState(false);
   const [tempSeekTime, setTempSeekTime] = useState(0);
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentTrack) return;
+    toggleCurrentTrackFavorite();
+    try {
+      await fetch(`/api/tracks/${currentTrack.id}/like`, { method: 'POST' });
+    } catch (err) {
+      console.error('Like error:', err);
+    }
+  };
 
   if (!currentTrack) return null;
 
@@ -122,6 +135,17 @@ export const PlayerBar: React.FC = () => {
               </span>
             )}
           </div>
+
+          {/* Heart Button (Desktop) */}
+          <button
+            onClick={handleLike}
+            className={`p-1.5 rounded-full transition-all hover:scale-110 shrink-0 ${
+              currentTrack.isFavorite ? 'text-spotify-green' : 'text-spotify-muted hover:text-white'
+            }`}
+            title={currentTrack.isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
+          >
+            <Heart className={`h-4 w-4 ${currentTrack.isFavorite ? 'fill-current' : ''}`} />
+          </button>
         </div>
 
         {/* Center Column: Transport Controls & Scrubber */}
@@ -291,8 +315,17 @@ export const PlayerBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Right buttons: Video indicator + Play/Pause */}
+        {/* Right buttons: Video indicator + Like + Play/Pause */}
         <div className="flex items-center gap-2 shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={handleLike}
+            className={`p-1.5 transition-colors ${
+              currentTrack.isFavorite ? 'text-spotify-green' : 'text-spotify-muted hover:text-white'
+            }`}
+          >
+            <Heart className={`h-4 w-4 ${currentTrack.isFavorite ? 'fill-current' : ''}`} />
+          </button>
+
           {isVideo && (
             <button
               onClick={() => {
@@ -356,23 +389,35 @@ export const PlayerBar: React.FC = () => {
 
           {/* Track Details & Action Row */}
           <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h3 className="text-xl font-bold text-white truncate">{currentTrack.title}</h3>
                 <p className="text-sm text-spotify-muted truncate">{currentTrack.artist}</p>
               </div>
-              {isVideo && (
+
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    toggleVideoTheater();
-                    toggleMobilePlayerExpanded();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/90 text-white text-xs font-bold shadow-lg"
+                  onClick={handleLike}
+                  className={`p-2 rounded-full transition-transform active:scale-90 ${
+                    currentTrack.isFavorite ? 'text-spotify-green' : 'text-spotify-muted'
+                  }`}
                 >
-                  <Film className="h-4 w-4" />
-                  <span>Watch Video</span>
+                  <Heart className={`h-6 w-6 ${currentTrack.isFavorite ? 'fill-current' : ''}`} />
                 </button>
-              )}
+
+                {isVideo && (
+                  <button
+                    onClick={() => {
+                      toggleVideoTheater();
+                      toggleMobilePlayerExpanded();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/90 text-white text-xs font-bold shadow-lg"
+                  >
+                    <Film className="h-4 w-4" />
+                    <span>Watch</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Scrubber */}

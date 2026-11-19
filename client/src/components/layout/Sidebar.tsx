@@ -1,12 +1,20 @@
 import React from 'react';
-import { Home, Search, Library, Plus, Sparkles, Music, Film, FolderHeart } from 'lucide-react';
+import { Home, Search, Library, Plus, Sparkles, Music, Film, FolderHeart, Heart } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 interface SidebarProps {
   categories?: { id: string; name: string; color: string }[];
+  likedCount?: number;
+  isFavoritesOnly?: boolean;
+  onToggleFavorites?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ categories = [] }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  categories = [], 
+  likedCount = 0,
+  isFavoritesOnly = false,
+  onToggleFavorites
+}) => {
   const { 
     activeTab, 
     setActiveTab, 
@@ -36,9 +44,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ categories = [] }) => {
         {/* Primary Links */}
         <nav className="flex flex-col gap-1 mt-2">
           <button
-            onClick={() => { setActiveTab('home'); setSelectedCategory(null); }}
+            onClick={() => { setActiveTab('home'); setSelectedCategory(null); if (isFavoritesOnly && onToggleFavorites) onToggleFavorites(); }}
             className={`flex items-center gap-4 px-3 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 ${
-              activeTab === 'home' && !selectedCategory
+              activeTab === 'home' && !selectedCategory && !isFavoritesOnly
                 ? 'text-white bg-spotify-highlight'
                 : 'text-spotify-muted hover:text-white hover:bg-spotify-highlight/60'
             }`}
@@ -79,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ categories = [] }) => {
         <div className="flex items-center justify-between px-2 pt-1">
           <div className="flex items-center gap-2 text-spotify-muted font-semibold text-xs tracking-wider uppercase">
             <FolderHeart className="h-4 w-4" />
-            <span>Categories</span>
+            <span>Your Collection</span>
           </div>
           <button
             onClick={() => setIsUploadModalOpen(true)}
@@ -89,6 +97,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ categories = [] }) => {
             <Plus className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Liked Songs Permanent Card */}
+        <button
+          onClick={() => {
+            setSelectedCategory(null);
+            if (onToggleFavorites && !isFavoritesOnly) onToggleFavorites();
+          }}
+          className={`flex items-center gap-3 w-full p-2.5 rounded-lg border transition-all text-left ${
+            isFavoritesOnly
+              ? 'bg-gradient-to-r from-purple-900/60 to-pink-900/40 border-pink-500/50 text-white shadow-lg shadow-purple-950/40'
+              : 'bg-spotify-highlight/30 hover:bg-spotify-highlight/60 border-white/5 text-spotify-subtext hover:text-white'
+          }`}
+        >
+          <div className="h-8 w-8 rounded-md bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shrink-0 shadow-md">
+            <Heart className="h-4 w-4 fill-white text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-white">Liked Songs</p>
+            <p className="text-[11px] text-spotify-muted">{likedCount} songs</p>
+          </div>
+        </button>
 
         {/* Upload Action Callout */}
         <button
@@ -127,18 +156,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ categories = [] }) => {
 
         {/* Dynamic Category List */}
         <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+          <p className="text-[10px] font-semibold text-spotify-muted uppercase px-2 pt-1 tracking-wider">Categories</p>
           {categories.length === 0 ? (
-            <div className="px-2 py-4 text-center">
+            <div className="px-2 py-2 text-center">
               <p className="text-xs text-spotify-muted">No categories yet.</p>
-              <p className="text-[11px] text-spotify-muted/70 mt-1">Upload tracks to organize by category.</p>
             </div>
           ) : (
             categories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
+              const isSelected = selectedCategory === cat.id && !isFavoritesOnly;
               return (
                 <button
                   key={cat.id}
                   onClick={() => {
+                    if (isFavoritesOnly && onToggleFavorites) onToggleFavorites();
                     setSelectedCategory(isSelected ? null : cat.id);
                     setActiveTab('home');
                   }}
