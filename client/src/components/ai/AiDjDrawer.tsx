@@ -6,11 +6,19 @@ import {
   Play, 
   Film, 
   Music, 
-  Loader2
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { Track } from '../../types';
+import { 
+  speakDjAnnouncement, 
+  stopVoiceDj, 
+  isVoiceDjSupported 
+} from '../../utils/voiceDj';
 
 interface Message {
   id: string;
@@ -47,12 +55,46 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState<string>('Groq LLaMA 3.3');
+  const [isVoiceDjEnabled, setIsVoiceDjEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('myspoti_voice_dj') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [isSpeakingVoiceDj, setIsSpeakingVoiceDj] = useState(false);
+  const [activeSpeechInfo, setActiveSpeechInfo] = useState<{ title: string; artist: string; track: Track; queue: Track[] } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  const toggleVoiceDj = () => {
+    const nextState = !isVoiceDjEnabled;
+    setIsVoiceDjEnabled(nextState);
+    try {
+      localStorage.setItem('myspoti_voice_dj', String(nextState));
+    } catch {}
+    if (!nextState && isSpeakingVoiceDj) {
+      stopVoiceDj();
+      setIsSpeakingVoiceDj(false);
+      setActiveSpeechInfo(null);
+    }
+  };
+
+  const handleSkipSpeech = () => {
+    if (activeSpeechInfo) {
+      stopVoiceDj();
+      setIsSpeakingVoiceDj(false);
+      playTrack(activeSpeechInfo.track, activeSpeechInfo.queue);
+      setActiveSpeechInfo(null);
+    } else {
+      stopVoiceDj();
+      setIsSpeakingVoiceDj(false);
+    }
+  };
 
   if (!isAiDrawerOpen) return null;
 
@@ -120,9 +162,47 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
     }
   };
 
-  const handlePlayQueue = (suggestedTracks: Track[]) => {
+  const handlePlayQueue = (suggestedTracks: Track[], mood?: string) => {
     if (!suggestedTracks || suggestedTracks.length === 0) return;
-    playTrack(suggestedTracks[0], suggestedTracks);
+    const targetTrack = suggestedTracks[0];
+
+    if (isVoiceDjEnabled && isVoiceDjSupported()) {
+      setIsSpeakingVoiceDj(true);
+      setActiveSpeechInfo({
+        title: targetTrack.title,
+        artist: targetTrack.artist,
+        track: targetTrack,
+        queue: suggestedTracks
+      });
+
+      speakDjAnnouncement(targetTrack.title, targetTrack.artist, mood, undefined, () => {
+        setIsSpeakingVoiceDj(false);
+        setActiveSpeechInfo(null);
+        playTrack(targetTrack, suggestedTracks);
+      });
+    } else {
+      playTrack(targetTrack, suggestedTracks);
+    }
+  };
+
+  const handlePlaySingle = (track: Track, queue: Track[], mood?: string) => {
+    if (isVoiceDjEnabled && isVoiceDjSupported()) {
+      setIsSpeakingVoiceDj(true);
+      setActiveSpeechInfo({
+        title: track.title,
+        artist: track.artist,
+        track,
+        queue
+      });
+
+      speakDjAnnouncement(track.title, track.artist, mood, undefined, () => {
+        setIsSpeakingVoiceDj(false);
+        setActiveSpeechInfo(null);
+        playTrack(track, queue);
+      });
+    } else {
+      playTrack(track, queue);
+    }
   };
 
   return (
@@ -144,7 +224,21 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* Voice DJ Toggle */}
+          <button
+            onClick={toggleVoiceDj}
+            title={isVoiceDjEnabled ? 'Spoken Voice DJ Enabled (Click to Mute)' : 'Spoken Voice DJ Disabled (Click to Enable)'}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+              isVoiceDjEnabled
+                ? 'bg-spotify-green/20 text-spotify-green border-spotify-green/40 shadow-sm'
+                : 'bg-spotify-highlight text-spotify-muted border-white/5 hover:text-white'
+            }`}
+          >
+            {isVoiceDjEnabled ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">Voice DJ</span>
+          </button>
+
           <button
             onClick={toggleAiDrawer}
             className="p-2 rounded-full hover:bg-spotify-highlight text-spotify-muted hover:text-white transition-colors"
@@ -153,6 +247,29 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
           </button>
         </div>
       </div>
+
+      {/* Spoken DJ Radio Banner (While Speaking) */}
+      {isSpeakingVoiceDj && activeSpeechInfo && (
+        <div className="bg-gradient-to-r from-purple-900/90 via-pink-900/80 to-purple-950/90 border-b border-purple-500/30 p-3 flex items-center justify-between text-xs animate-fadeIn">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-0.5 h-4">
+              <span className="w-1 bg-spotify-green rounded-full animate-bounce [animation-delay:0ms] h-3"></span>
+              <span className="w-1 bg-spotify-green rounded-full animate-bounce [animation-delay:150ms] h-4"></span>
+              <span className="w-1 bg-spotify-green rounded-full animate-bounce [animation-delay:300ms] h-2"></span>
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-white truncate">AI DJ on the mic...</p>
+              <p className="text-[10px] text-purple-200 truncate">Introducing {activeSpeechInfo.title}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSkipSpeech}
+            className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-[10px] shrink-0 border border-white/10 transition-colors"
+          >
+            Skip Intro
+          </button>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -178,7 +295,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
                       {msg.suggestedTracks.length} Curated Tracks
                     </span>
                     <button
-                      onClick={() => handlePlayQueue(msg.suggestedTracks!)}
+                      onClick={() => handlePlayQueue(msg.suggestedTracks!, msg.moodDetected)}
                       className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-spotify-green text-black font-bold text-[11px] hover:scale-105 transition-all shadow-md"
                     >
                       <Play className="h-3 w-3 fill-black" />
@@ -190,7 +307,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
                     {msg.suggestedTracks.map((t) => (
                       <div
                         key={t.id}
-                        onClick={() => playTrack(t, msg.suggestedTracks)}
+                        onClick={() => handlePlaySingle(t, msg.suggestedTracks!, msg.moodDetected)}
                         className="flex items-center justify-between p-1.5 rounded-lg bg-black/40 hover:bg-black/70 cursor-pointer transition-colors border border-white/5"
                       >
                         <div className="flex items-center gap-2 min-w-0">
