@@ -13,7 +13,7 @@ export const MobileNav: React.FC = () => {
   } = useAppStore();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black via-black/95 to-black/80 backdrop-blur-lg border-t border-white/10 px-2 py-1.5 flex items-center justify-around select-none">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black via-black/95 to-black/80 backdrop-blur-lg border-t border-white/10 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around select-none">
       <button
         onClick={() => { setActiveTab('home'); setSelectedCategory(null); }}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-colors ${

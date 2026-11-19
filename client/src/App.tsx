@@ -7,6 +7,7 @@ import { VideoTheater } from './components/player/VideoTheater';
 import { CategoryPills } from './components/library/CategoryPills';
 import { TrackTable } from './components/library/TrackTable';
 import { AiDjDrawer } from './components/ai/AiDjDrawer';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAppStore } from './store/useAppStore';
 import { usePlayerStore } from './store/usePlayerStore';
 import { Category, Track } from './types';
@@ -44,6 +45,9 @@ export default function App() {
     playTrack,
     togglePlay
   } = usePlayerStore();
+
+  // Initialize global keyboard shortcuts (Space, Arrow keys, M, Esc)
+  useKeyboardShortcuts();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
