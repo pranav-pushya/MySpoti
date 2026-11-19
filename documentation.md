@@ -102,9 +102,25 @@ The webapp is built from the ground up to render flawlessly across all standard 
 
 ---
 
-## 5. Upcoming Phases Roadmap
+### Phase 2: Database Models & Multi-Format Upload Engine
 
-- **Phase 2: Database Models & Multi-Format Upload Engine**
+#### Step 2.1: SQLite Database Setup & Migrations ✅
+- **What Was Done**:
+  - Implemented SQLite database instance in `server/src/db.ts` utilizing `better-sqlite3` with WAL mode enabled (`PRAGMA journal_mode = WAL`) and foreign key enforcement.
+  - Defined relational tables:
+    - `categories`: `id`, `name`, `slug`, `color`, `icon`, `created_at`.
+    - `tracks`: `id`, `title`, `artist`, `file_name`, `file_path`, `mime_type`, `format`, `duration`, `category_id`, `mood_tags`, `cover_art_url`, `created_at`.
+    - Added database indexes on `tracks(category_id)` and `tracks(format)`.
+  - Added seed routine initializing 6 default categories (*Chill & Relax*, *Workout Beats*, *Lo-Fi Focus*, *Pop Hits*, *Rock Classics*, *Ambient Vibes*).
+  - Exported type-safe helper functions (`getCategoriesWithCount`, `createCategory`, `insertTrack`, `getAllTracks`, `getTrackById`, `deleteTrack`).
+  - Added `.gitkeep` in `server/data/` and updated `.gitignore` to prevent tracking `.db` files.
+- **Why It Was Done**:
+  - Forms the durable storage foundation for user-uploaded music, custom categories, and mood-tag metadata.
+- **Verification Details**:
+  - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying types and zero syntax errors.
+  - *Verification 2*: Executed isolated runtime script initializing the database, seeding 6 categories, inserting a test track, querying category relations, and successfully deleting the record.
+
+---
   - Step 2.1: SQLite Database setup & migrations (`categories`, `tracks` tables).
   - Step 2.2: Category management APIs (list, create, seed default categories).
   - Step 2.3: Multer file upload pipeline with MIME type checking.

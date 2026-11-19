@@ -19,6 +19,10 @@ build/
 Thumbs.db
 server/uploads/*
 !server/uploads/.gitkeep
+server/data/*
+!server/data/.gitkeep
+*.db
+*.sqlite
 
 # IDE & Editor
 .vscode/
