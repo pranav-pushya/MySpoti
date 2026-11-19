@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { useMediaSession } from '../../hooks/useMediaSession';
 
 export const MediaController: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Activate native lockscreen & notification media controls
+  useMediaSession();
 
   const {
     currentTrack,
@@ -11,6 +15,7 @@ export const MediaController: React.FC = () => {
     volume,
     isMuted,
     repeatMode,
+    isVideoTheaterOpen,
     setCurrentTime,
     setDuration,
     nextTrack,
@@ -59,12 +64,14 @@ export const MediaController: React.FC = () => {
     }
   }, [isPlaying]);
 
-  // Sync Volume & Mute
+  // Sync Volume & Mute (Mute background audio element if Video Theater is actively playing an MP4 video)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.volume = isMuted ? 0 : volume;
-  }, [volume, isMuted]);
+    const isVideo = currentTrack?.format === 'mp4' || currentTrack?.format === 'webm';
+    const shouldMute = isMuted || (isVideoTheaterOpen && isVideo);
+    audio.volume = shouldMute ? 0 : volume;
+  }, [volume, isMuted, isVideoTheaterOpen, currentTrack]);
 
   // Handle external seek
   useEffect(() => {
