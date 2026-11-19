@@ -195,10 +195,45 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 1*: Ran server TypeScript compilation (`tsc`) verifying zero type or syntax errors.
   - *Verification 2*: Executed live HTTP range streaming check requesting `Range: bytes=0-15` on a test track. Confirmed HTTP 206, validated `Content-Range: bytes 0-15/1024`, and confirmed exact 16-byte buffer payload.
 
+#### Step 3.2: Global Media Player State (`usePlayerStore.ts`) ✅
+- **What Was Done**:
+  - Implemented Zustand media player store in `client/src/store/usePlayerStore.ts`.
+  - Manages `currentTrack`, `queue`, `queueIndex`, `isPlaying`, `currentTime`, `duration`, `volume`, `isMuted`, `isShuffle`, `repeatMode` (`off` | `all` | `one`), and modal toggles.
+  - Implemented smart queue navigation (automatic next track, shuffle calculation, repeat-one looping, and restart on prevTrack).
+  - Persists volume preference in `localStorage`.
+- **Why It Was Done**:
+  - Serves as the single source of truth for all playback operations across desktop and mobile components.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript compilation verified all action signatures and state types.
+  - *Verification 2*: Production build validated zero runtime bundling issues with Zustand.
+
+#### Step 3.3: Persistent Bottom Player Bar & Responsive Mobile Sheet ✅
+- **What Was Done**:
+  - Built `client/src/components/player/PlayerBar.tsx`:
+    - **Desktop/Tablet Player Bar**: 3-column Spotify layout with album art, track details, format badge (`MP4 VIDEO` / `MP3 AUDIO`), transport controls (Shuffle, Prev, big circular Play/Pause, Next, Repeat), interactive seek slider with mm:ss timestamps, video view toggle, and volume slider.
+    - **Mobile Floating Mini-Player**: Fixed above bottom nav with top progress line, track title, MP4 video launch icon, and quick Play/Pause button.
+    - **Mobile Full-Screen Now-Playing Sheet**: Tap-to-expand modal for 9:16 portrait mobile screens featuring large album artwork, full-width scrubber, and large touch-friendly transport controls.
+  - Built `client/src/components/player/MediaController.tsx` handling audio streaming, time updates, and automated next-track triggers.
+- **Why It Was Done**:
+  - Delivers a native Spotify playback experience that feels natural on both desktop ultra-wide displays and mobile phones.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript production build (`tsc && vite build`) passed with zero errors.
+  - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages.
+
+#### Step 3.4: Dual-Mode MP4 Video Theater Overlay ✅
+- **What Was Done**:
+  - Built `client/src/components/player/VideoTheater.tsx` providing an adaptive video viewer for MP4 tracks.
+  - Supported aspect ratios: **16:9 widescreen** and **9:16 vertical/Reels-style** music videos with `object-contain` preservation.
+  - Integrated Picture-in-Picture (PiP) and Fullscreen controls.
+  - Synchronized video playback position, play/pause state, and volume with the global media store.
+  - One-click **"Audio Mode"** button to collapse video back to background audio without interrupting music playback.
+- **Why It Was Done**:
+  - Gives users the best of both worlds: watching music videos in high fidelity or listening in audio-only mode while multitasking.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript compilation passed with zero errors.
+  - *Verification 2*: Full monorepo build (`npm run build`) compiled successfully with exit code 0.
+
 ---
-  - Step 3.2: Global player Zustand store with queue management.
-  - Bottom player bar (desktop full view, mobile mini-player + sheet).
-  - Dual-mode MP4 video theater overlay with aspect ratio preservation.
 - **Phase 4: Library Browsing, Category Exploration & Search**
   - Category filter carousel with touch-friendly pills.
   - Responsive track card grids and table view.
