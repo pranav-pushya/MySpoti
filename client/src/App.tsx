@@ -14,6 +14,7 @@ import { Category, Track, Playlist } from './types';
 import { PlaylistModal } from './components/library/PlaylistModal';
 import { AddToPlaylistMenu } from './components/library/AddToPlaylistMenu';
 import { ReelsFeed } from './components/player/ReelsFeed';
+import { InstallAppPrompt } from './components/pwa/InstallAppPrompt';
 import { 
   Music, 
   Upload, 
@@ -711,6 +712,9 @@ export default function App() {
           onOpenCreatePlaylist={() => setIsPlaylistModalOpen(true)}
         />
       )}
+
+      {/* PWA Mobile & Tablet Install Prompt (Bottom Left) */}
+      <InstallAppPrompt />
     </>
   );
 }
