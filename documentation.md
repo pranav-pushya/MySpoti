@@ -495,3 +495,70 @@ The webapp is built from the ground up to render flawlessly across all standard 
   - *Verification 2*: Full monorepo build (`npm run build`) succeeded across both server and client packages with exit code 0.
 
 ---
+
+### Phase 12: 📱 PWA Progressive Web App & Bottom-Left Install Popup ✅
+
+#### Step 12.1: Web App Manifest & Service Worker Setup ✅
+- **What Was Done**:
+  - Generated PWA icons (`icon.svg`, `icon-192.png`, `icon-512.png`) with Spotify green styling, soundwaves, and MP4 video indicator.
+  - Created `manifest.webmanifest` configuring `standalone` display mode, `#121212` theme/background color, and multi-format audio/video categories.
+  - Created `client/public/sw.js` service worker handling asset pre-caching and offline app shell caching while bypassing cache for byte-range streaming (`/api/stream/*`) and uploads.
+  - Updated `index.html` with mobile meta tags (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `viewport-fit=cover`).
+  - Added production service worker registration in `main.tsx`.
+- **Why It Was Done**:
+  - Transforms MySpoti into an installable progressive web app meeting all Chromium and Apple PWA installation criteria.
+- **Verification Details**:
+  - *Verification 1*: Client production build (`tsc && vite build`) passed with zero errors.
+  - *Verification 2*: Verified dist directory containing `manifest.webmanifest`, `sw.js`, and all icon assets.
+
+#### Step 12.2: Bottom-Left Install App Popup UI (`InstallAppPrompt.tsx`) ✅
+- **What Was Done**:
+  - Built `client/src/components/pwa/InstallAppPrompt.tsx` anchored in the **bottom-left corner** (`bottom-20 left-3 sm:bottom-24 sm:left-4 z-50`).
+  - Exclusively targets mobile and tablet viewports, automatically hiding if already running in standalone mode or dismissed within 24 hours.
+  - Handles Chromium `beforeinstallprompt` event with a 1-tap **"Install App"** green button.
+  - Handles iOS / Safari: detects iPhone/iPad and displays a 3-step guide (Share button ➔ Add to Home Screen ➔ Add).
+  - Integrated popup in `App.tsx`.
+- **Why It Was Done**:
+  - Delivers a native-feeling prompt for mobile and tablet visitors to install MySpoti onto their home screen.
+- **Verification Details**:
+  - *Verification 1*: Client TypeScript compilation passed with zero errors.
+  - *Verification 2*: Production build validated zero bundle issues.
+
+---
+
+### Phase 13: 🔄 Multi-Device Sync & Vercel Deployment Architecture ✅
+
+#### Step 13.1: Centralized API Client & Remote / LAN Support ✅
+- **What Was Done**:
+  - Built `client/src/config/api.ts` providing `getApiUrl()` and `getMediaUrl()`.
+  - Dynamically consumes `VITE_API_URL` when deployed separately on Vercel while falling back to relative paths for local development and reverse proxying.
+  - Updated all API fetch calls and media player `<audio>` / `<video>` sources across `App.tsx`, `MediaController.tsx`, `VideoTheater.tsx`, `ReelsFeed.tsx`, `PlayerBar.tsx`, `UploadModal.tsx`, `PlaylistModal.tsx`, and `AiDjDrawer.tsx`.
+  - Configured Vite `server.host: true` and Express `0.0.0.0` binding with network IPv4 logging so phones and tablets on local Wi-Fi can connect immediately.
+- **Why It Was Done**:
+  - Decouples client and server hosting, enabling the frontend to deploy anywhere (including Vercel) while keeping media storage and playback synchronized.
+- **Verification Details**:
+  - *Verification 1*: TypeScript compile verified across both client and server.
+  - *Verification 2*: Production build succeeded with zero errors.
+
+#### Step 13.2: Spotify Connect Style Device Sync (`useDeviceSync.ts` & `DeviceConnectModal.tsx`) ✅
+- **What Was Done**:
+  - Built real-time device registry router `server/src/routes/sync.ts` supporting `/api/sync/heartbeat`, `/api/sync/devices`, and `/api/sync/command`.
+  - Built `client/src/hooks/useDeviceSync.ts` managing persistent device IDs, device classification (mobile, tablet, desktop), 4s heartbeat loops, and remote command processing (`play`, `pause`, `next`, `prev`, `seek`, `transferTrack`).
+  - Built `client/src/components/player/DeviceConnectModal.tsx` showing current device status, active devices online, and 1-click playback transfer.
+  - Injected Spotify Connect device icon button (`<Cast />`) into desktop PlayerBar and mobile now-playing sheet.
+- **Why It Was Done**:
+  - Replicates Spotify Connect: control music from your phone while listening on your computer, or transfer playback seamlessly from device to device.
+- **Verification Details**:
+  - *Verification 1*: TypeScript compile verified zero errors across all components.
+  - *Verification 2*: Live API integration test verified device heartbeat registration, device discovery, and remote command delivery.
+
+#### Step 13.3: Vercel Deployment Configuration & Guide ✅
+- **What Was Done**:
+  - Created root `vercel.json` and `client/vercel.json` pre-configured for Vite SPA routing with catch-all rewrites.
+  - Added `"vercel-build": "npm --prefix client run build"` in root `package.json`.
+  - Authored comprehensive `DEPLOYMENT.md` detailing Vercel deployment, Cloudflare tunnel remote access, and local Wi-Fi syncing.
+- **Why It Was Done**:
+  - Guarantees 1-click zero-configuration deployment to Vercel.
+- **Verification Details**:
+  - *Verification 1*: Full monorepo build (`npm run build`) succeeded across both packages.
+  - *Verification 2*: Verified `vercel-build` script execution producing valid dist artifacts.
