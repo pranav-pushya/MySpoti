@@ -3,6 +3,7 @@ import { Track, Playlist } from '../../types';
 import { Play, Pause, Clock, Trash2, Film, Music, Heart, MinusCircle } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
+import { getMediaUrl } from '../../config/api';
 
 interface TrackTableProps {
   tracks: Track[];
@@ -87,7 +88,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
               <div className="col-span-10 sm:col-span-5 flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 rounded bg-spotify-elevated shrink-0 overflow-hidden flex items-center justify-center">
                   {track.coverArtUrl ? (
-                    <img src={track.coverArtUrl} alt={track.title} className="w-full h-full object-cover" />
+                    <img src={getMediaUrl(track.coverArtUrl)} alt={track.title} className="w-full h-full object-cover" />
                   ) : isVideo ? (
                     <Film className="h-5 w-5 text-purple-400" />
                   ) : (

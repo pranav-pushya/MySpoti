@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { initDb } from './db.js';
 import categoriesRouter from './routes/categories.js';
@@ -49,8 +50,22 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🎵 MySpoti server running at http://localhost:${PORT}`);
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`🎵 MySpoti server running on port ${PORT}`);
+  console.log(`   ➜ Local:   http://localhost:${PORT}`);
+
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          console.log(`   ➜ Network: http://${iface.address}:${PORT}`);
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
 });
 
 export default app;

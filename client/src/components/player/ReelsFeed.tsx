@@ -16,6 +16,7 @@ import {
 import { Track, Playlist } from '../../types';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { AddToPlaylistMenu } from '../library/AddToPlaylistMenu';
+import { getApiUrl } from '../../config/api';
 
 interface ReelsFeedProps {
   tracks: Track[];
@@ -68,7 +69,7 @@ export const ReelsFeed: React.FC<ReelsFeedProps> = ({
     const video = videoRef.current;
     if (!video || !currentTrack) return;
 
-    video.src = `/api/stream/${currentTrack.id}`;
+    video.src = getApiUrl(`/api/stream/${currentTrack.id}`);
     video.currentTime = 0;
     if (isPlaying) {
       video.play().catch(console.warn);

@@ -11,6 +11,7 @@ import {
   Pipette
 } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { getApiUrl } from '../../config/api';
 
 export const VideoTheater: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -37,8 +38,9 @@ export const VideoTheater: React.FC = () => {
     const video = videoRef.current;
     if (!video || !isVideo || !isVideoTheaterOpen || !currentTrack) return;
 
-    const streamUrl = `/api/stream/${currentTrack.id}`;
-    if (video.src !== window.location.origin + streamUrl) {
+    const streamUrl = getApiUrl(`/api/stream/${currentTrack.id}`);
+    const resolvedTarget = streamUrl.startsWith('http') ? streamUrl : window.location.origin + streamUrl;
+    if (video.src !== resolvedTarget) {
       video.src = streamUrl;
       video.currentTime = currentTime;
       if (isPlaying) {

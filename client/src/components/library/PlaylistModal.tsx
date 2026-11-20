@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ListMusic, Plus } from 'lucide-react';
 import { Playlist } from '../../types';
+import { getApiUrl } from '../../config/api';
 
 interface PlaylistModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
       setIsSubmitting(true);
       setError(null);
 
-      const res = await fetch('/api/playlists', {
+      const res = await fetch(getApiUrl('/api/playlists'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), description: description.trim() })

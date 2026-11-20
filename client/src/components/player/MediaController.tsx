@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { useMediaSession } from '../../hooks/useMediaSession';
+import { getApiUrl } from '../../config/api';
 
 export const MediaController: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -28,8 +29,9 @@ export const MediaController: React.FC = () => {
     if (!audio) return;
 
     if (currentTrack) {
-      const streamUrl = `/api/stream/${currentTrack.id}`;
-      if (audio.src !== window.location.origin + streamUrl) {
+      const streamUrl = getApiUrl(`/api/stream/${currentTrack.id}`);
+      const resolvedTarget = streamUrl.startsWith('http') ? streamUrl : window.location.origin + streamUrl;
+      if (audio.src !== resolvedTarget) {
         audio.src = streamUrl;
         audio.load();
         if (isPlaying) {

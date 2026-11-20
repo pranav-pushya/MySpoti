@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { getMediaUrl } from '../config/api';
 
 export const useMediaSession = () => {
   const {
@@ -19,12 +20,14 @@ export const useMediaSession = () => {
     if (!('mediaSession' in navigator) || !currentTrack) return;
 
     try {
-      const artwork = currentTrack.coverArtUrl
+      const artUrl = currentTrack.coverArtUrl ? getMediaUrl(currentTrack.coverArtUrl) : null;
+      const fullArtUrl = artUrl ? (artUrl.startsWith('http') ? artUrl : window.location.origin + artUrl) : null;
+      const artwork = fullArtUrl
         ? [
-            { src: currentTrack.coverArtUrl, sizes: '96x96', type: 'image/jpeg' },
-            { src: currentTrack.coverArtUrl, sizes: '128x128', type: 'image/jpeg' },
-            { src: currentTrack.coverArtUrl, sizes: '256x256', type: 'image/jpeg' },
-            { src: currentTrack.coverArtUrl, sizes: '512x512', type: 'image/jpeg' }
+            { src: fullArtUrl, sizes: '96x96', type: 'image/jpeg' },
+            { src: fullArtUrl, sizes: '128x128', type: 'image/jpeg' },
+            { src: fullArtUrl, sizes: '256x256', type: 'image/jpeg' },
+            { src: fullArtUrl, sizes: '512x512', type: 'image/jpeg' }
           ]
         : [];
 

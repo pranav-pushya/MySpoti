@@ -11,6 +11,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAppStore } from './store/useAppStore';
 import { usePlayerStore } from './store/usePlayerStore';
 import { Category, Track, Playlist } from './types';
+import { getApiUrl, getMediaUrl } from './config/api';
 import { PlaylistModal } from './components/library/PlaylistModal';
 import { AddToPlaylistMenu } from './components/library/AddToPlaylistMenu';
 import { ReelsFeed } from './components/player/ReelsFeed';
@@ -74,9 +75,9 @@ export default function App() {
     try {
       setIsLoading(true);
       const [catRes, trackRes, playlistRes] = await Promise.all([
-        fetch('/api/categories'),
-        fetch('/api/tracks'),
-        fetch('/api/playlists')
+        fetch(getApiUrl('/api/categories')),
+        fetch(getApiUrl('/api/tracks')),
+        fetch(getApiUrl('/api/playlists'))
       ]);
 
       if (catRes.ok) {
@@ -107,7 +108,7 @@ export default function App() {
   // Fetch individual playlist details when a playlist is selected
   const fetchPlaylistDetails = async (id: string) => {
     try {
-      const res = await fetch(`/api/playlists/${id}`);
+      const res = await fetch(getApiUrl(`/api/playlists/${id}`));
       if (res.ok) {
         const data = await res.json();
         setCurrentPlaylistDetails(data.playlist);
@@ -134,14 +135,14 @@ export default function App() {
 
   const handleAddToPlaylist = async (playlistId: string, trackId: string) => {
     try {
-      const res = await fetch(`/api/playlists/${playlistId}/tracks`, {
+      const res = await fetch(getApiUrl(`/api/playlists/${playlistId}/tracks`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trackId })
       });
       if (res.ok) {
         // Refresh playlists counts
-        const plRes = await fetch('/api/playlists');
+        const plRes = await fetch(getApiUrl('/api/playlists'));
         if (plRes.ok) {
           const plData = await plRes.json();
           setPlaylists(plData.playlists || []);
@@ -158,12 +159,12 @@ export default function App() {
   const handleRemoveTrackFromPlaylist = async (trackId: string) => {
     if (!selectedPlaylistId) return;
     try {
-      const res = await fetch(`/api/playlists/${selectedPlaylistId}/tracks/${trackId}`, {
+      const res = await fetch(getApiUrl(`/api/playlists/${selectedPlaylistId}/tracks/${trackId}`), {
         method: 'DELETE'
       });
       if (res.ok) {
         fetchPlaylistDetails(selectedPlaylistId);
-        const plRes = await fetch('/api/playlists');
+        const plRes = await fetch(getApiUrl('/api/playlists'));
         if (plRes.ok) {
           const plData = await plRes.json();
           setPlaylists(plData.playlists || []);
@@ -177,7 +178,7 @@ export default function App() {
   const handleDeletePlaylist = async (playlistId: string) => {
     if (!confirm('Are you sure you want to delete this playlist?')) return;
     try {
-      const res = await fetch(`/api/playlists/${playlistId}`, { method: 'DELETE' });
+      const res = await fetch(getApiUrl(`/api/playlists/${playlistId}`), { method: 'DELETE' });
       if (res.ok) {
         if (selectedPlaylistId === playlistId) {
           setSelectedPlaylistId(null);
@@ -192,7 +193,7 @@ export default function App() {
   const handleUploadSuccess = (newTrack: Track) => {
     setTracks(prev => [newTrack, ...prev]);
     // Refresh categories
-    fetch('/api/categories')
+    fetch(getApiUrl('/api/categories'))
       .then(r => r.json())
       .then(d => d.categories && setCategories(d.categories))
       .catch(console.error);
@@ -212,10 +213,10 @@ export default function App() {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this track?')) return;
     try {
-      const res = await fetch(`/api/tracks/${trackId}`, { method: 'DELETE' });
+      const res = await fetch(getApiUrl(`/api/tracks/${trackId}`), { method: 'DELETE' });
       if (res.ok) {
         setTracks(prev => prev.filter(t => t.id !== trackId));
-        fetch('/api/categories')
+        fetch(getApiUrl('/api/categories'))
           .then(r => r.json())
           .then(d => d.categories && setCategories(d.categories))
           .catch(console.error);
@@ -241,7 +242,7 @@ export default function App() {
     }
 
     try {
-      await fetch(`/api/tracks/${trackId}/like`, { method: 'POST' });
+      await fetch(getApiUrl(`/api/tracks/${trackId}/like`), { method: 'POST' });
     } catch (err) {
       console.error('Like toggle error:', err);
     }
@@ -555,7 +556,7 @@ export default function App() {
                     >
                       <div className="relative aspect-video rounded-md bg-spotify-elevated overflow-hidden mb-2.5 flex items-center justify-center">
                         {t.coverArtUrl ? (
-                          <img src={t.coverArtUrl} alt={t.title} className="w-full h-full object-cover" />
+                          <img src={getMediaUrl(t.coverArtUrl)} alt={t.title} className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex flex-col items-center justify-center text-spotify-muted gap-1">
                             {isVideo ? <Film className="h-8 w-8 text-purple-400" /> : <Music className="h-8 w-8 text-spotify-green" />}

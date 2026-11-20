@@ -5,6 +5,7 @@ import { MobileNav } from './MobileNav';
 import { useAppStore } from '../../store/useAppStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { extractDominantColor, ExtractedColor } from '../../utils/colorExtractor';
+import { getMediaUrl } from '../../config/api';
 import { Playlist } from '../../types';
 
 interface ShellProps {
@@ -41,7 +42,7 @@ export const Shell: React.FC<ShellProps> = ({
 
   useEffect(() => {
     if (currentTrack?.coverArtUrl) {
-      extractDominantColor(currentTrack.coverArtUrl).then(setAmbientColor);
+      extractDominantColor(getMediaUrl(currentTrack.coverArtUrl)).then(setAmbientColor);
     } else {
       setAmbientColor(null);
     }

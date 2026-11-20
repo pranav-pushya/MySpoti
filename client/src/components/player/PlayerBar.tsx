@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { extractDominantColor, ExtractedColor } from '../../utils/colorExtractor';
+import { getApiUrl, getMediaUrl } from '../../config/api';
 
 const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -57,7 +58,7 @@ export const PlayerBar: React.FC = () => {
 
   useEffect(() => {
     if (currentTrack?.coverArtUrl) {
-      extractDominantColor(currentTrack.coverArtUrl).then(setAmbientColor);
+      extractDominantColor(getMediaUrl(currentTrack.coverArtUrl)).then(setAmbientColor);
     } else {
       setAmbientColor(null);
     }
@@ -68,7 +69,7 @@ export const PlayerBar: React.FC = () => {
     if (!currentTrack) return;
     toggleCurrentTrackFavorite();
     try {
-      await fetch(`/api/tracks/${currentTrack.id}/like`, { method: 'POST' });
+      await fetch(getApiUrl(`/api/tracks/${currentTrack.id}/like`), { method: 'POST' });
     } catch (err) {
       console.error('Like error:', err);
     }
@@ -116,7 +117,7 @@ export const PlayerBar: React.FC = () => {
             }`}
           >
             {currentTrack.coverArtUrl ? (
-              <img src={currentTrack.coverArtUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
+              <img src={getMediaUrl(currentTrack.coverArtUrl)} alt={currentTrack.title} className="w-full h-full object-cover" />
             ) : isVideo ? (
               <Film className="h-6 w-6 text-purple-400" />
             ) : (
@@ -324,7 +325,7 @@ export const PlayerBar: React.FC = () => {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="h-10 w-10 rounded bg-spotify-card shrink-0 overflow-hidden flex items-center justify-center">
             {currentTrack.coverArtUrl ? (
-              <img src={currentTrack.coverArtUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
+              <img src={getMediaUrl(currentTrack.coverArtUrl)} alt={currentTrack.title} className="w-full h-full object-cover" />
             ) : isVideo ? (
               <Film className="h-5 w-5 text-purple-400" />
             ) : (
@@ -404,7 +405,7 @@ export const PlayerBar: React.FC = () => {
           <div className="flex-1 flex items-center justify-center my-4">
             <div className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden bg-spotify-elevated shadow-2xl border border-white/10 flex items-center justify-center">
               {currentTrack.coverArtUrl ? (
-                <img src={currentTrack.coverArtUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
+                <img src={getMediaUrl(currentTrack.coverArtUrl)} alt={currentTrack.title} className="w-full h-full object-cover" />
               ) : isVideo ? (
                 <div className="text-center space-y-2">
                   <Film className="h-16 w-16 text-purple-400 mx-auto" />

@@ -19,6 +19,7 @@ import {
   stopVoiceDj, 
   isVoiceDjSupported 
 } from '../../utils/voiceDj';
+import { getApiUrl } from '../../config/api';
 
 interface Message {
   id: string;
@@ -113,7 +114,7 @@ export const AiDjDrawer: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch(getApiUrl('/api/ai/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

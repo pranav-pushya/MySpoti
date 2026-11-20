@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Category, Track } from '../../types';
+import { getApiUrl } from '../../config/api';
 
 interface UploadModalProps {
   categories: Category[];
@@ -210,7 +211,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
       setUploadProgress(50);
 
-      const response = await fetch('/api/tracks/upload', {
+      const response = await fetch(getApiUrl('/api/tracks/upload'), {
         method: 'POST',
         body: formData
       });
