@@ -10,6 +10,7 @@ import tracksRouter from './routes/tracks.js';
 import streamRouter from './routes/stream.js';
 import aiRouter from './routes/ai.js';
 import playlistsRouter from './routes/playlists.js';
+import syncRouter from './routes/sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,7 @@ app.use('/api/tracks', tracksRouter);
 app.use('/api/playlists', playlistsRouter);
 app.use('/api/stream', streamRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/sync', syncRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

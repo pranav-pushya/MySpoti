@@ -299,7 +299,7 @@ export default function App() {
             onCategoryCreated={handleCategoryCreated}
           />
         }
-        playerSlot={<PlayerBar />}
+        playerSlot={<PlayerBar tracks={tracks} />}
         aiDrawerSlot={<AiDjDrawer tracks={tracks} />}
       >
         <div className="p-4 sm:p-6 space-y-6">

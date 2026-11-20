@@ -14,11 +14,19 @@ import {
   Music, 
   ChevronDown, 
   Maximize2,
-  Heart
+  Heart,
+  Cast
 } from 'lucide-react';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { extractDominantColor, ExtractedColor } from '../../utils/colorExtractor';
 import { getApiUrl, getMediaUrl } from '../../config/api';
+import { useDeviceSync } from '../../hooks/useDeviceSync';
+import { DeviceConnectModal } from './DeviceConnectModal';
+import { Track } from '../../types';
+
+interface PlayerBarProps {
+  tracks?: Track[];
+}
 
 const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -27,7 +35,16 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const PlayerBar: React.FC = () => {
+export const PlayerBar: React.FC<PlayerBarProps> = ({ tracks = [] }) => {
+  const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
+  const {
+    localDevice,
+    devices,
+    isSyncing,
+    refreshDevices,
+    transferPlaybackTo,
+    transferPlaybackHere
+  } = useDeviceSync(tracks);
   const {
     currentTrack,
     isPlaying,
@@ -298,6 +315,22 @@ export const PlayerBar: React.FC = () => {
               }}
             />
           </div>
+
+          {/* Spotify Connect Device Sync Button */}
+          <button
+            onClick={() => setIsDeviceModalOpen(true)}
+            className={`relative p-1.5 rounded-full transition-colors ${
+              devices.length > 1
+                ? 'text-spotify-green hover:text-white bg-spotify-green/10'
+                : 'text-spotify-muted hover:text-white hover:bg-white/5'
+            }`}
+            title="Connect to a device / Cross-Device Sync"
+          >
+            <Cast className="h-4 w-4" />
+            {devices.length > 1 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-spotify-green ring-2 ring-black" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -509,9 +542,39 @@ export const PlayerBar: React.FC = () => {
                 {repeatMode === 'one' ? <Repeat1 className="h-5 w-5" /> : <Repeat className="h-5 w-5" />}
               </button>
             </div>
+
+            {/* Mobile Sheet Device Connect Trigger */}
+            <div className="pt-3 flex items-center justify-between border-t border-white/10 text-xs">
+              <button
+                onClick={() => setIsDeviceModalOpen(true)}
+                className="flex items-center gap-2 text-zinc-300 hover:text-white"
+              >
+                <Cast className={`w-4 h-4 ${devices.length > 1 ? 'text-spotify-green' : 'text-zinc-400'}`} />
+                <span className="truncate">
+                  {devices.length > 1 ? `Sync with ${localDevice.deviceName}` : 'Connect to a device'}
+                </span>
+              </button>
+              {devices.length > 1 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-spotify-green/20 text-spotify-green font-semibold">
+                  {devices.length} Online
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Cross-Device Spotify Connect Modal */}
+      <DeviceConnectModal
+        isOpen={isDeviceModalOpen}
+        onClose={() => setIsDeviceModalOpen(false)}
+        localDevice={localDevice}
+        devices={devices}
+        isSyncing={isSyncing}
+        onRefresh={refreshDevices}
+        onTransferTo={transferPlaybackTo}
+        onTransferHere={transferPlaybackHere}
+      />
     </>
   );
 };
